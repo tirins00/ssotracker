@@ -13,8 +13,9 @@ body { background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
 .logo-text .name { font-weight: 700; font-size: 14px; color: #7b1a1a; line-height: 1.2; }
 .logo-text .sub { font-size: 11px; color: #888; }
 .sidebar-section-label { font-size: 10px; font-weight: 600; color: #aaa; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 16px 6px; }
-.nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 16px; font-size: 13.5px; color: #555; cursor: pointer; border: none; background: none; width: 100%; text-align: left; transition: background 0.15s, color 0.15s; }
-.nav-link:hover { background: #fdf2f2; color: #7b1a1a; }
+.nav-link { display: flex; align-items: center; gap: 10px; padding: 9px 16px; font-size: 13.5px; color: #555; cursor: pointer; border: none; background: none; width: 100%; text-align: left; transition: background 0.15s, color 0.15s; text-decoration: none; }
+.nav-link:visited { text-decoration: none; }
+.nav-link:hover { background: #fdf2f2; color: #7b1a1a; text-decoration: none; }
 .nav-link.active { background: #7b1a1a; color: #fff; }
 .sidebar-bottom { margin-top: auto; padding: 12px 16px; border-top: 1px solid #f0f0f0; }
 .user-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
@@ -46,6 +47,12 @@ body { background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
 .view-all:hover { text-decoration: underline; }
 .empty-card { background: #fff; border-radius: 10px; border: 1px solid #efefef; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .empty-card p { font-size: 13.5px; color: #aaa; }
+.active-summary-card { background: #fff; border-radius: 10px; border: 1px solid #efefef; padding: 20px 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.active-summary-left { display: flex; align-items: center; gap: 12px; }
+.active-icon { width: 34px; height: 34px; border-radius: 10px; background: #fdf2f2; display: flex; align-items: center; justify-content: center; }
+.active-title { font-size: 14px; font-weight: 700; }
+.active-sub { font-size: 12.5px; color: #888; margin-top: 2px; }
+.active-summary-card .submit-btn-big { margin-top: 0; }
 .submit-btn-big { display: flex; align-items: center; gap: 8px; background: #7b1a1a; color: #fff; border: none; border-radius: 8px; padding: 11px 22px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.15s; }
 .submit-btn-big:hover { background: #5a1010; }
 
@@ -99,6 +106,21 @@ body { background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
 .filter-tab { padding: 8px 18px; border-radius: 20px; font-size: 13px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; transition: all 0.15s; font-weight: 500; }
 .filter-tab:hover { border-color: #7b1a1a; color: #7b1a1a; }
 .filter-tab.active { background: #7b1a1a; color: #fff; border-color: #7b1a1a; }
+.req-table { background: #fff; border-radius: 10px; border: 1px solid #efefef; overflow: hidden; }
+.req-head, .req-row { display: grid; grid-template-columns: 1.2fr 0.8fr 0.55fr 1.45fr; gap: 14px; align-items: center; padding: 14px 18px; }
+.req-head { background: #fafafa; border-bottom: 1px solid #f0f0f0; font-size: 12px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.06em; }
+.req-row { border-bottom: 1px solid #f6f6f6; font-size: 13.5px; }
+.req-row:last-child { border-bottom: none; }
+.req-title { font-weight: 700; color: #1a1a1a; }
+.req-sub { font-size: 12px; color: #888; margin-top: 2px; }
+.req-date { color: #555; font-variant-numeric: tabular-nums; }
+.req-purpose { color: #333; line-height: 1.35; }
+.status-badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid; white-space: nowrap; }
+.status-pending { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
+.status-in-review { background: #eff9ff; color: #0369a1; border-color: #7dd3fc; }
+.status-processing { background: #eef2ff; color: #4338ca; border-color: #a5b4fc; }
+.status-completed { background: #f0fdf4; color: #15803d; border-color: #86efac; }
+.status-rejected { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 
 /* NOTIFICATIONS */
 .notif-empty { background: #fff; border-radius: 10px; border: 1px solid #efefef; padding: 64px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
