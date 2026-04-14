@@ -11,6 +11,7 @@ const NAV_ITEMS = [
 
 const Sidebar = ({ user, onLogout }) => {
   const location = useLocation();
+  const avatarLetter = (user?.firstName?.[0] || user?.displayName?.[0] || '?').toUpperCase();
 
   return (
     <aside className="sidebar">
@@ -41,10 +42,10 @@ const Sidebar = ({ user, onLogout }) => {
       {/* User + Logout */}
       <div className="sidebar-bottom">
         <div className="user-row">
-          <div className="user-avatar">{user.name[0]}</div>
+          <div className="user-avatar">{avatarLetter}</div>
           <div className="user-info">
-            <div className="uname">{user.name}</div>
-            <div className="uid">{user.id}</div>
+            <div className="uname">{user?.displayName || 'Student'}</div>
+            <div className="uid">{user?.email || ''}</div>
           </div>
         </div>
         <button className="logout-btn" onClick={onLogout}>

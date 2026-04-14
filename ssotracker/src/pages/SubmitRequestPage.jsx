@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Stepper from '../components/Stepper';
 import DocumentCard from '../components/DocumentCard';
 import Icon from '../components/Icon';
@@ -16,7 +17,14 @@ const DOCUMENTS = [
 
 const STEPS = ['Select Document', 'Request Details', 'Review & Submit'];
 
-const SubmitRequestPage = ({ showToast }) => {
+const newId = () => {
+  // Use a stable, unique id for list rendering; works in modern browsers and has a fallback.
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const SubmitRequestPage = ({ showToast, onSubmitRequest }) => {
+  const navigate = useNavigate();
   const [step,     setStep]     = useState(1);
   const [selected, setSelected] = useState(null);
   const [purpose,  setPurpose]  = useState('');
@@ -24,7 +32,26 @@ const SubmitRequestPage = ({ showToast }) => {
 
   const reset = () => { setStep(1); setSelected(null); setPurpose(''); setNotes(''); };
 
-  const handleSubmit = () => { showToast('Request submitted successfully!'); reset(); };
+  const handleSubmit = () => {
+    const req = {
+      id: newId(),
+      status: 'Pending',
+      createdAt: new Date().toISOString(),
+      document: {
+        id: selected?.id,
+        title: selected?.title,
+        processingTime: selected?.days,
+      },
+      purpose: purpose.trim(),
+      notes: notes.trim(),
+    };
+
+    if (onSubmitRequest) onSubmitRequest(req);
+    if (showToast) showToast('Request submitted successfully!');
+
+    reset();
+    navigate('/track');
+  };
 
   return (
     <div>

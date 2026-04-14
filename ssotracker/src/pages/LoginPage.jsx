@@ -8,7 +8,7 @@ const LoginPage = ({ onLogin }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email && password) onLogin();
+    if (email && password) onLogin(email.trim());
   };
 
   return (
