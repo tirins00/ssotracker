@@ -129,6 +129,9 @@ body { background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
 .overdue-badge { display: inline-flex; align-items: center; margin-left: 8px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid #fca5a5; background: #fef2f2; color: #b91c1c; white-space: nowrap; }
 .req-action { display: flex; justify-content: flex-start; }
 .req-action-muted { color: #bbb; }
+.bookmark-btn { width: 36px; min-width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #e0e0e0; background: #fff; color: #bbb; border-radius: 8px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s; }
+.bookmark-btn:hover { border-color: #7b1a1a; color: #7b1a1a; transform: translateY(-1px); }
+.bookmark-btn.bookmarked { background: #7b1a1a; border-color: #7b1a1a; color: #fff; }
 .ping-btn { border: 1px solid #7b1a1a; background: #fff; color: #7b1a1a; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .ping-btn:hover { background: #7b1a1a; color: #fff; }
 .ping-btn:disabled { opacity: 0.55; cursor: not-allowed; background: #f5f5f5; border-color: #e0e0e0; color: #777; }
@@ -258,6 +261,9 @@ html.dark-mode .req-sub { color: #999; }
 html.dark-mode .req-date { color: #aaa; }
 html.dark-mode .req-due { color: #999; }
 html.dark-mode .req-purpose { color: #ccc; }
+html.dark-mode .bookmark-btn { background: #2d2d2d; border-color: #3a3a3a; color: #777; }
+html.dark-mode .bookmark-btn:hover { border-color: #7b1a1a; color: #7b1a1a; }
+html.dark-mode .bookmark-btn.bookmarked { background: #7b1a1a; border-color: #7b1a1a; color: #fff; }
 html.dark-mode .form-input { background: #2d2d2d; border-color: #3a3a3a; color: #f5f5f5; }
 html.dark-mode .form-input:focus { border-color: #7b1a1a; }
 html.dark-mode .form-input::placeholder { color: #666; }

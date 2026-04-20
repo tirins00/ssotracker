@@ -3,7 +3,7 @@ import Icon from '../components/Icon';
 import { formatShortDate, getDueDate, isRequestOverdue } from '../utils/requestSla';
 import { useBookmarks } from '../context/BookmarkContext';
 
-const TABS = ['All Requests', 'Pending', 'In Review', 'Processing', 'Completed', 'Rejected'];
+const TABS = ['All Requests', 'Bookmarked', 'Pending', 'In Review', 'Processing', 'Completed', 'Rejected'];
 
 const toYMD = (d) => {
   try {
@@ -39,6 +39,7 @@ const TrackRequestsPage = ({ requests = [], onPingAdmin }) => {
 
   const filtered = requests.filter((r) => {
     if (activeTab === 'All Requests') return true;
+    if (activeTab === 'Bookmarked') return isBookmarked(r?.id);
     return r.status === activeTab;
   }).filter((r) => {
     const createdAt = r?.createdAt ? new Date(r.createdAt) : null;
@@ -121,12 +122,12 @@ const TrackRequestsPage = ({ requests = [], onPingAdmin }) => {
                 <div className="req-purpose">{r.purpose}</div>
                 <div className="req-action">
                   <button
-                    className={`ping-btn ${isBookmarked(r.id) ? 'bookmarked' : ''}`}
+                    className={`bookmark-btn ${isBookmarked(r.id) ? 'bookmarked' : ''}`}
                     onClick={() => toggleBookmark(r.id)}
                     title={isBookmarked(r.id) ? 'Remove bookmark' : 'Bookmark this request'}
-                    style={{ width: '36px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    aria-label={isBookmarked(r.id) ? 'Remove bookmark' : 'Bookmark this request'}
                   >
-                    <Icon name="bookmark" size={16} color={isBookmarked(r.id) ? '#7b1a1a' : 'currentColor'} />
+                    <Icon name="bookmark" size={16} color={isBookmarked(r.id) ? '#fff' : 'currentColor'} />
                   </button>
                   {overdue ? (
                     hasPinged ? (
