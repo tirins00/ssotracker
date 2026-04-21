@@ -18,7 +18,7 @@ const LoginPage = ({ onLogin }) => {
       <div className="login-hero">
         <img
           className="login-hero-img"
-          src="https://picsum.photos/seed/citucampus/900/1200"
+          src="https://cit.edu/wp-content/uploads/2023/07/GLE-Building.jpg"
           alt="CIT-U Campus"
           width={900}
           height={1200}
