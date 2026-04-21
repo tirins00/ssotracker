@@ -5,10 +5,11 @@ const LoginPage = ({ onLogin }) => {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPw,   setShowPw]   = useState(false);
+  const [role,     setRole]     = useState('student');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (email && password) onLogin(email.trim());
+    if (email && password) onLogin(email.trim(), role);
   };
 
   return (
@@ -58,6 +59,28 @@ const LoginPage = ({ onLogin }) => {
         <div className="login-form-box">
           <div className="login-title">Welcome back</div>
           <div className="login-subtitle">Sign in to access your SSO account</div>
+          <div className="form-field">
+            <label>I am a:</label>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              {[
+                { value: 'student', label: 'Student' },
+                { value: 'staff', label: 'Staff' },
+                { value: 'admin', label: 'Admin' },
+              ].map((opt) => (
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13.5px' }}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value={opt.value}
+                    checked={role === opt.value}
+                    onChange={(e) => setRole(e.target.value)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <form onSubmit={handleSubmit}>
             <div className="form-field">
               <label>Email Address</label>

@@ -23,7 +23,7 @@ const newId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const SubmitRequestPage = ({ showToast, onSubmitRequest }) => {
+const SubmitRequestPage = ({ showToast, onSubmitRequest, user = {} }) => {
   const navigate = useNavigate();
   const [step,     setStep]     = useState(1);
   const [selected, setSelected] = useState(null);
@@ -37,6 +37,8 @@ const SubmitRequestPage = ({ showToast, onSubmitRequest }) => {
       id: newId(),
       status: 'Pending',
       createdAt: new Date().toISOString(),
+      studentName: user?.displayName || 'Unknown',
+      studentEmail: user?.email || '',
       document: {
         id: selected?.id,
         title: selected?.title,
