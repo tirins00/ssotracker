@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import Icon from './Icon';
+import { useTheme } from '../context/ThemeContext';
 
-const NAV_ITEMS = [
+const STUDENT_NAV_ITEMS = [
   { path: '/dashboard',     label: 'Dashboard',      icon: 'dashboard' },
   { path: '/submit',        label: 'Submit Request',  icon: 'submit'    },
   { path: '/track',         label: 'Track Requests',  icon: 'track'     },
@@ -9,9 +10,36 @@ const NAV_ITEMS = [
   { path: '/faq',           label: 'FAQ',             icon: 'faq'       },
 ];
 
+const STAFF_NAV_ITEMS = [
+  { path: '/staff-dashboard', label: 'Dashboard',      icon: 'dashboard' },
+  { path: '/notifications',   label: 'Notifications',   icon: 'bell'      },
+  { path: '/faq',             label: 'FAQ',             icon: 'faq'       },
+];
+
+const ADMIN_NAV_ITEMS = [
+  { path: '/admin-dashboard', label: 'Dashboard',      icon: 'dashboard' },
+  { path: '/notifications',   label: 'Notifications',   icon: 'bell'      },
+  { path: '/faq',             label: 'FAQ',             icon: 'faq'       },
+];
+
 const Sidebar = ({ user, onLogout }) => {
   const location = useLocation();
+  const { isDarkMode, toggleTheme } = useTheme();
   const avatarLetter = (user?.firstName?.[0] || user?.displayName?.[0] || '?').toUpperCase();
+
+  const getNavItems = () => {
+    if (user?.role === 'admin') return ADMIN_NAV_ITEMS;
+    if (user?.role === 'staff') return STAFF_NAV_ITEMS;
+    return STUDENT_NAV_ITEMS;
+  };
+
+  const getSectionLabel = () => {
+    if (user?.role === 'admin') return 'Admin Portal';
+    if (user?.role === 'staff') return 'Staff Portal';
+    return 'Student Portal';
+  };
+
+  const navItems = getNavItems();
 
   return (
     <aside className="sidebar">
@@ -27,8 +55,8 @@ const Sidebar = ({ user, onLogout }) => {
       </div>
 
       {/* Nav Links */}
-      <div className="sidebar-section-label">Student Portal</div>
-      {NAV_ITEMS.map((item) => (
+      <div className="sidebar-section-label">{getSectionLabel()}</div>
+      {navItems.map((item) => (
         <Link
           key={item.path}
           to={item.path}
@@ -48,6 +76,10 @@ const Sidebar = ({ user, onLogout }) => {
             <div className="uid">{user?.email || ''}</div>
           </div>
         </div>
+        <button className="logout-btn" onClick={toggleTheme} title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
+          <Icon name={isDarkMode ? 'sun' : 'moon'} size={15} />
+          {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
         <button className="logout-btn" onClick={onLogout}>
           <Icon name="logout" size={15} />
           Logout
