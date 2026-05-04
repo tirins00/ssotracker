@@ -52,6 +52,13 @@ public class DocumentRequest {
     @Column(name = "queue_position", nullable = false)
     private Integer queuePosition;
 
+    @NotBlank
+    @Column(nullable = false, length = 1000)
+    private String purpose;
+
+    @Column(length = 1000)
+    private String notes;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
@@ -116,6 +123,22 @@ public class DocumentRequest {
 
     public void setQueuePosition(Integer queuePosition) {
         this.queuePosition = queuePosition;
+    }
+
+    public String getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(String purpose) {
+        this.purpose = purpose;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     public Student getStudent() {
