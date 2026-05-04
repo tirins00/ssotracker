@@ -16,7 +16,6 @@ export const ThemeProvider = ({ children }) => {
     try {
       localStorage.setItem('ssotracker.theme', JSON.stringify(isDarkMode));
     } catch {
-      // Ignore storage failures
     }
   }, [isDarkMode]);
 

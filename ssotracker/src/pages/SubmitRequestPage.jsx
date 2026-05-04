@@ -18,7 +18,6 @@ const DOCUMENTS = [
 const STEPS = ['Select Document', 'Request Details', 'Review & Submit'];
 
 const newId = () => {
-  // Use a stable, unique id for list rendering; works in modern browsers and has a fallback.
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };

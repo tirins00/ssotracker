@@ -141,6 +141,23 @@ body { background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
 .status-completed { background: #f0fdf4; color: #15803d; border-color: #86efac; }
 .status-rejected { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 
+/* ADMIN CRUD */
+.admin-crud-panel { margin-top: 28px; }
+.admin-crud-form { background: #fff; border: 1px solid #efefef; border-radius: 10px; padding: 16px; display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)) 90px auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+.admin-active-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #555; }
+.admin-active-toggle input { width: 16px; height: 16px; accent-color: #7b1a1a; }
+.admin-crud-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.admin-crud-actions .btn-next, .admin-crud-actions .btn-back { margin: 0; white-space: nowrap; }
+.admin-crud-error { border: 1px solid #fca5a5; background: #fef2f2; color: #b91c1c; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+.admin-user-table { background: #fff; border: 1px solid #efefef; border-radius: 10px; overflow: hidden; }
+.admin-user-head, .admin-user-row { display: grid; grid-template-columns: 1fr 1.2fr 1fr 0.55fr 0.85fr; gap: 14px; align-items: center; padding: 14px 18px; }
+.admin-user-head { background: #fafafa; border-bottom: 1px solid #f0f0f0; font-size: 12px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.06em; }
+.admin-user-row { border-bottom: 1px solid #f6f6f6; font-size: 13.5px; }
+.admin-user-row:last-child { border-bottom: none; }
+.admin-user-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.track-clear.danger:hover { background: #fef2f2; border-color: #b91c1c; color: #b91c1c; }
+.admin-user-empty { padding: 28px 18px; font-size: 13.5px; color: #999; text-align: center; }
+
 /* NOTIFICATIONS */
 .notif-empty { background: #fff; border-radius: 10px; border: 1px solid #efefef; padding: 64px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .notif-empty p { font-size: 13.5px; color: #aaa; }
@@ -283,9 +300,23 @@ html.dark-mode .login-subtitle { color: #999; }
 html.dark-mode .form-field label { color: #aaa; }
 html.dark-mode .theme-toggle { background: #2d2d2d; border-color: #3a3a3a; color: #f5f5f5; }
 html.dark-mode .theme-toggle:hover { background: #3a3a3a; }
+html.dark-mode .admin-crud-form,
+html.dark-mode .admin-user-table { background: #242424; border-color: #3a3a3a; }
+html.dark-mode .admin-active-toggle { color: #aaa; }
+html.dark-mode .admin-user-head { background: #2d2d2d; border-bottom-color: #3a3a3a; color: #999; }
+html.dark-mode .admin-user-row { border-bottom-color: #2d2d2d; color: #ccc; }
+html.dark-mode .admin-user-empty { color: #888; }
 .doc-card-bookmark { position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer; padding: 4px; color: #ccc; font-size: 18px; transition: color 0.15s; }
 .doc-card-bookmark:hover { color: #7b1a1a; }
 .doc-card-bookmark.active { color: #7b1a1a; }
 html.dark-mode .doc-card-bookmark { color: #777; }
 html.dark-mode .doc-card-bookmark:hover { color: #7b1a1a; }
 html.dark-mode .doc-card-bookmark.active { color: #7b1a1a; }
+
+@media (max-width: 1100px) {
+  .admin-crud-form { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+  .admin-user-head, .admin-user-row { grid-template-columns: 1fr 1fr; }
+  .admin-user-head div:nth-child(3),
+  .admin-user-head div:nth-child(4),
+  .admin-user-head div:nth-child(5) { display: none; }
+}

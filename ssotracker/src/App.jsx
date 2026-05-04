@@ -113,7 +113,7 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin,
           {user.role === 'admin' ? (
             <>
               <Route path="/"                  element={<Navigate to="/admin-dashboard" replace />} />
-              <Route path="/admin-dashboard"   element={<AdminDashboardPage user={user} requests={requests} staffMembers={staffMembers} onAssignStaff={onAssignStaff} />} />
+              <Route path="/admin-dashboard"   element={<AdminDashboardPage user={user} requests={requests} staffMembers={staffMembers} onAssignStaff={onAssignStaff} showToast={showToast} />} />
               <Route path="/notifications"     element={<NotificationsPage notifications={notifications} />} />
               <Route path="/faq"               element={<FAQPage />} />
               <Route path="*"                  element={<Navigate to="/admin-dashboard" replace />} />

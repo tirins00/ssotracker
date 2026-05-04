@@ -1,36 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../components/Icon';
-import { getDueDate, isRequestOverdue } from '../utils/requestSla';
+import { isRequestOverdue } from '../utils/requestSla';
 
-const formatDateTime = (iso) => {
-  try {
-    return new Date(iso).toLocaleString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+const emptyAdminForm = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  position: '',
+  active: true,
 };
 
-const formatShortDate = (d) => {
-  try {
-    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
-  } catch {
-    return '';
-  }
-};
-
-const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignStaff, onUpdateStatus }) => {
+const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignStaff, showToast }) => {
   const dateStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
   const now = new Date();
-  const [selectedRequest, setSelectedRequest] = useState(null);
   const [filterStatus, setFilterStatus] = useState('All');
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminForm, setAdminForm] = useState(emptyAdminForm);
+  const [editingAdminId, setEditingAdminId] = useState(null);
+  const [adminCrudLoading, setAdminCrudLoading] = useState(false);
+  const [adminCrudError, setAdminCrudError] = useState('');
 
   const total = requests.length;
   const pending = requests.filter((r) => r.status === 'Pending').length;
@@ -48,6 +39,89 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
   const filteredRequests = filterStatus === 'All'
     ? requests
     : requests.filter((r) => r.status === filterStatus);
+
+  const notify = (message) => {
+    if (typeof showToast === 'function') showToast(message);
+  };
+
+  const loadAdminUsers = async () => {
+    setAdminCrudLoading(true);
+    setAdminCrudError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin-users`);
+      if (!response.ok) throw new Error('Unable to load admin users');
+      const data = await response.json();
+      setAdminUsers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setAdminCrudError('Spring Boot API is not reachable. Start the backend on port 8080.');
+    } finally {
+      setAdminCrudLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAdminUsers();
+  }, []);
+
+  const handleAdminField = (field, value) => {
+    setAdminForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const resetAdminForm = () => {
+    setAdminForm(emptyAdminForm);
+    setEditingAdminId(null);
+  };
+
+  const handleAdminSubmit = async (e) => {
+    e.preventDefault();
+    setAdminCrudLoading(true);
+    setAdminCrudError('');
+    try {
+      const url = editingAdminId
+        ? `${API_BASE_URL}/admin-users/${editingAdminId}`
+        : `${API_BASE_URL}/admin-users`;
+      const response = await fetch(url, {
+        method: editingAdminId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adminForm),
+      });
+      if (!response.ok) throw new Error('Unable to save admin user');
+      await loadAdminUsers();
+      resetAdminForm();
+      notify(editingAdminId ? 'Admin user updated' : 'Admin user created');
+    } catch (error) {
+      setAdminCrudError('Admin user could not be saved. Check the backend and email uniqueness.');
+    } finally {
+      setAdminCrudLoading(false);
+    }
+  };
+
+  const editAdmin = (admin) => {
+    setEditingAdminId(admin.adminId);
+    setAdminForm({
+      firstName: admin.firstName || '',
+      lastName: admin.lastName || '',
+      email: admin.email || '',
+      position: admin.position || '',
+      active: admin.active !== false,
+    });
+  };
+
+  const deleteAdmin = async (adminId) => {
+    setAdminCrudLoading(true);
+    setAdminCrudError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin-users/${adminId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Unable to delete admin user');
+      await loadAdminUsers();
+      if (editingAdminId === adminId) resetAdminForm();
+      notify('Admin user deleted');
+    } catch (error) {
+      setAdminCrudError('Admin user could not be deleted.');
+    } finally {
+      setAdminCrudLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -105,7 +179,6 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
             <div>Action</div>
           </div>
           {filteredRequests.map((r) => {
-            const due = getDueDate(r);
             const overdueReq = isRequestOverdue(r, now);
             const pingedAt = r?.adminPingedAt ? new Date(r.adminPingedAt) : null;
             const hasPinged = pingedAt && !Number.isNaN(pingedAt.getTime());
@@ -164,6 +237,102 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
           })}
         </div>
       )}
+
+      <div className="admin-crud-panel">
+        <div className="section-header">
+          <span className="section-title">Admin Users</span>
+          <button className="track-clear" type="button" onClick={loadAdminUsers} disabled={adminCrudLoading}>
+            Refresh
+          </button>
+        </div>
+
+        <form className="admin-crud-form" onSubmit={handleAdminSubmit}>
+          <input
+            className="form-input"
+            placeholder="First name"
+            value={adminForm.firstName}
+            onChange={(e) => handleAdminField('firstName', e.target.value)}
+            required
+          />
+          <input
+            className="form-input"
+            placeholder="Last name"
+            value={adminForm.lastName}
+            onChange={(e) => handleAdminField('lastName', e.target.value)}
+            required
+          />
+          <input
+            className="form-input"
+            type="email"
+            placeholder="Email"
+            value={adminForm.email}
+            onChange={(e) => handleAdminField('email', e.target.value)}
+            required
+          />
+          <input
+            className="form-input"
+            placeholder="Position"
+            value={adminForm.position}
+            onChange={(e) => handleAdminField('position', e.target.value)}
+            required
+          />
+          <label className="admin-active-toggle">
+            <input
+              type="checkbox"
+              checked={adminForm.active}
+              onChange={(e) => handleAdminField('active', e.target.checked)}
+            />
+            Active
+          </label>
+          <div className="admin-crud-actions">
+            <button className="btn-next" type="submit" disabled={adminCrudLoading}>
+              <Icon name={editingAdminId ? 'check' : 'plus'} size={15} color="#fff" />
+              {editingAdminId ? 'Update' : 'Create'}
+            </button>
+            {editingAdminId && (
+              <button className="btn-back" type="button" onClick={resetAdminForm}>
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+
+        {adminCrudError && <div className="admin-crud-error">{adminCrudError}</div>}
+
+        <div className="admin-user-table">
+          <div className="admin-user-head">
+            <div>Name</div>
+            <div>Email</div>
+            <div>Position</div>
+            <div>Status</div>
+            <div>Actions</div>
+          </div>
+          {adminUsers.length === 0 ? (
+            <div className="admin-user-empty">{adminCrudLoading ? 'Loading admin users...' : 'No admin users found'}</div>
+          ) : (
+            adminUsers.map((admin) => (
+              <div className="admin-user-row" key={admin.adminId}>
+                <div className="req-title">{admin.firstName} {admin.lastName}</div>
+                <div className="req-sub">{admin.email}</div>
+                <div>{admin.position}</div>
+                <div>
+                  <span className={`status-badge ${admin.active ? 'status-completed' : 'status-rejected'}`}>
+                    {admin.active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="admin-user-actions">
+                  <button className="track-clear" type="button" onClick={() => editAdmin(admin)}>
+                    Edit
+                  </button>
+                  <button className="track-clear danger" type="button" onClick={() => deleteAdmin(admin.adminId)}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 };
