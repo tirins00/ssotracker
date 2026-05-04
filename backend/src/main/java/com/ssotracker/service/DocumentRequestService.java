@@ -6,6 +6,7 @@ import com.ssotracker.model.Notification;
 import com.ssotracker.model.NotificationType;
 import com.ssotracker.model.RequestStatus;
 import com.ssotracker.model.Staff;
+import com.ssotracker.model.Student;
 import com.ssotracker.repository.DocumentRequestRepository;
 import com.ssotracker.repository.DocumentRequirementRepository;
 import com.ssotracker.repository.NotificationRepository;
@@ -53,8 +54,7 @@ public class DocumentRequestService {
     @Transactional
     public DocumentRequest submit(DocumentRequestCreateRequest request) {
         DocumentRequest documentRequest = new DocumentRequest();
-        documentRequest.setStudent(studentRepository.findById(request.studentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + request.studentId())));
+        documentRequest.setStudent(resolveStudent(request));
         documentRequest.setDocumentRequirement(requirementRepository.findById(request.documentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Document requirement not found: " + request.documentId())));
         documentRequest.setRequestType(request.requestType());
@@ -62,10 +62,38 @@ public class DocumentRequestService {
         documentRequest.setExpectedProcessingTime(request.expectedProcessingTime());
         documentRequest.setStatus(RequestStatus.PENDING);
         documentRequest.setQueuePosition((int) requestRepository.countByStatusNot(RequestStatus.COMPLETED) + 1);
+        documentRequest.setPurpose(request.purpose().trim());
+        documentRequest.setNotes(request.notes() == null ? "" : request.notes().trim());
 
         DocumentRequest saved = requestRepository.save(documentRequest);
         addNotification(saved, NotificationType.SUBMIT, "Document request submitted and added to the queue.");
         return saved;
+    }
+
+    private Student resolveStudent(DocumentRequestCreateRequest request) {
+        if (request.studentId() != null) {
+            return studentRepository.findById(request.studentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + request.studentId()));
+        }
+
+        String email = request.studentEmail() == null ? "" : request.studentEmail().trim().toLowerCase();
+        if (email.isBlank()) {
+            throw new ResourceNotFoundException("Student email is required when studentId is not provided.");
+        }
+
+        return studentRepository.findByEmail(email)
+                .orElseGet(() -> createStudent(request.studentName(), email));
+    }
+
+    private Student createStudent(String studentName, String email) {
+        String name = studentName == null ? "" : studentName.trim();
+        String[] parts = name.isBlank() ? new String[0] : name.split("\\s+");
+        Student student = new Student();
+        student.setFirstName(parts.length == 0 ? "Student" : parts[0]);
+        student.setLastName(parts.length <= 1 ? "User" : parts[parts.length - 1]);
+        student.setEmail(email);
+        student.setYearLevel(1);
+        return studentRepository.save(student);
     }
 
     @Transactional

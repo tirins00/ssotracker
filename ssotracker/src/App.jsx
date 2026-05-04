@@ -17,6 +17,44 @@ import { BookmarkProvider } from './context/BookmarkContext';
 
 const STORAGE_KEY = 'ssotracker.requests.v1';
 const NOTIF_KEY = 'ssotracker.notifications.v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+
+const statusFromApi = (status) => {
+  const labels = {
+    PENDING: 'Pending',
+    IN_REVIEW: 'In Review',
+    PROCESSING: 'Processing',
+    COMPLETED: 'Completed',
+    REJECTED: 'Rejected',
+  };
+  return labels[status] || status || 'Pending';
+};
+
+const parseProcessingDays = (value) => {
+  const match = String(value || '').match(/\d+/);
+  return match ? Number(match[0]) : 1;
+};
+
+const formatProcessingTime = (days) => {
+  const count = Number(days) || 1;
+  return `${count} day${count === 1 ? '' : 's'} processing`;
+};
+
+const mapApiRequest = (request) => ({
+  id: String(request.requestId),
+  status: statusFromApi(request.status),
+  createdAt: request.requestDate ? `${request.requestDate}T00:00:00.000Z` : new Date().toISOString(),
+  studentName: request.studentName || 'Unknown',
+  studentEmail: request.studentEmail || '',
+  assignedTo: request.assignedStaffName || '',
+  document: {
+    id: request.documentId,
+    title: request.documentType || request.requestType || 'Document',
+    processingTime: formatProcessingTime(request.expectedProcessingTime),
+  },
+  purpose: request.purpose || request.requestType || '',
+  notes: request.notes || '',
+});
 
 const loadRequests = () => {
   try {
@@ -174,14 +212,37 @@ const App = () => {
     setNotifications((prev) => [notif, ...prev]);
   };
 
-  const addRequest = (req) => {
-    setRequests((prev) => [req, ...prev]);
+  const addRequest = async (req) => {
+    let savedRequest = req;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName: req.studentName,
+          studentEmail: req.studentEmail,
+          documentId: req.document.id,
+          requestType: req.document.title,
+          expectedProcessingTime: parseProcessingDays(req.document.processingTime),
+          purpose: req.purpose,
+          notes: req.notes,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Unable to save document request');
+      savedRequest = mapApiRequest(await response.json());
+    } catch {
+      showToast('Backend is offline. Request saved locally for now.');
+    }
+
+    setRequests((prev) => [savedRequest, ...prev]);
     addNotification({
       id: newId(),
       createdAt: new Date().toISOString(),
       type: 'submit',
-      title: 'Request submitted',
-      message: `Your request for "${req?.document?.title || 'Document'}" has been submitted.`,
+      title: savedRequest === req ? 'Request saved locally' : 'Request submitted',
+      message: `Your request for "${savedRequest?.document?.title || 'Document'}" has been submitted.`,
     });
   };
 
@@ -217,6 +278,31 @@ const App = () => {
     });
     showToast('Admin has been notified about your overdue request.');
   };
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    let active = true;
+
+    const loadBackendRequests = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/document-requests`);
+        if (!response.ok) throw new Error('Unable to load document requests');
+        const data = await response.json();
+        if (active && Array.isArray(data)) {
+          setRequests(data.map(mapApiRequest).reverse());
+        }
+      } catch {
+        // Keep local storage data when the backend is not running.
+      }
+    };
+
+    loadBackendRequests();
+
+    return () => {
+      active = false;
+    };
+  }, [loggedIn]);
 
   useEffect(() => {
     try {

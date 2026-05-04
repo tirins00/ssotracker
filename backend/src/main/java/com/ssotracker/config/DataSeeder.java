@@ -50,16 +50,22 @@ public class DataSeeder {
                 staffRepository.save(staff);
             }
 
-            if (requirementRepository.count() == 0) {
-                seedRequirement(requirementRepository, "Good Moral Certificate", "Student ID, clearance status, and request purpose.");
-                seedRequirement(requirementRepository, "Certificate of Good Standing", "Student ID and current enrollment validation.");
-                seedRequirement(requirementRepository, "Enrollment Certificate", "Student ID and active enrollment record.");
-                seedRequirement(requirementRepository, "Student Clearance", "Student ID and completed clearance checklist.");
-            }
+            seedMissingRequirement(requirementRepository, "Excuse Slip", "Absence details, supporting proof, and request purpose.");
+            seedMissingRequirement(requirementRepository, "Good Moral Certificate", "Student ID, clearance status, and request purpose.");
+            seedMissingRequirement(requirementRepository, "Certificate of Good Standing", "Student ID and current enrollment validation.");
+            seedMissingRequirement(requirementRepository, "Enrollment Certificate", "Student ID and active enrollment record.");
+            seedMissingRequirement(requirementRepository, "Indigency Certificate", "Student ID, financial need details, and request purpose.");
+            seedMissingRequirement(requirementRepository, "Scholarship Endorsement Letter", "Scholarship details and required endorsement information.");
+            seedMissingRequirement(requirementRepository, "Student Clearance", "Student ID and completed clearance checklist.");
+            seedMissingRequirement(requirementRepository, "Transfer Credentials", "Transfer destination details and clearance validation.");
         };
     }
 
-    private void seedRequirement(DocumentRequirementRepository repository, String type, String details) {
+    private void seedMissingRequirement(DocumentRequirementRepository repository, String type, String details) {
+        if (repository.existsByDocumentType(type)) {
+            return;
+        }
+
         DocumentRequirement requirement = new DocumentRequirement();
         requirement.setDocumentType(type);
         requirement.setDocumentDetails(details);

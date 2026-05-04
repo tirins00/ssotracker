@@ -5,9 +5,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record DocumentRequestCreateRequest(
-        @NotNull Long studentId,
+        Long studentId,
+        String studentName,
+        String studentEmail,
         @NotNull Long documentId,
         @NotBlank String requestType,
-        @NotNull @Min(1) Integer expectedProcessingTime
+        @NotNull @Min(1) Integer expectedProcessingTime,
+        @NotBlank String purpose,
+        String notes
 ) {
 }
