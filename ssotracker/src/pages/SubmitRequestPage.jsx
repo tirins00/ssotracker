@@ -28,12 +28,10 @@ const SubmitRequestPage = ({ showToast, onSubmitRequest, user = {} }) => {
   const [selected, setSelected] = useState(null);
   const [purpose,  setPurpose]  = useState('');
   const [notes,    setNotes]    = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   const reset = () => { setStep(1); setSelected(null); setPurpose(''); setNotes(''); };
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
+  const handleSubmit = () => {
     const req = {
       id: newId(),
       status: 'Pending',
@@ -49,15 +47,11 @@ const SubmitRequestPage = ({ showToast, onSubmitRequest, user = {} }) => {
       notes: notes.trim(),
     };
 
-    try {
-      if (onSubmitRequest) await onSubmitRequest(req);
-      if (showToast) showToast('Request submitted successfully!');
+    if (onSubmitRequest) onSubmitRequest(req);
+    if (showToast) showToast('Request submitted successfully!');
 
-      reset();
-      navigate('/track');
-    } finally {
-      setSubmitting(false);
-    }
+    reset();
+    navigate('/track');
   };
 
   return (
@@ -108,9 +102,7 @@ const SubmitRequestPage = ({ showToast, onSubmitRequest, user = {} }) => {
           {notes && <div className="review-row"><span className="review-label">Additional Notes</span><span className="review-value">{notes}</span></div>}
           <div className="btn-row" style={{ marginTop: 24 }}>
             <button className="btn-back" onClick={() => setStep(2)}><Icon name="chevLeft" size={15} /> Back</button>
-            <button className="btn-next" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit Request'} <Icon name="chevRight" size={15} color="#fff" />
-            </button>
+            <button className="btn-next" onClick={handleSubmit}>Submit Request <Icon name="chevRight" size={15} color="#fff" /></button>
           </div>
         </div>
       )}
