@@ -17,6 +17,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,6 +59,9 @@ public class DocumentRequest {
 
     @Column(length = 1000)
     private String notes;
+
+    @Column(name = "admin_pinged_at")
+    private LocalDateTime adminPingedAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "student_id", nullable = false)
@@ -139,6 +143,14 @@ public class DocumentRequest {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public LocalDateTime getAdminPingedAt() {
+        return adminPingedAt;
+    }
+
+    public void setAdminPingedAt(LocalDateTime adminPingedAt) {
+        this.adminPingedAt = adminPingedAt;
     }
 
     public Student getStudent() {

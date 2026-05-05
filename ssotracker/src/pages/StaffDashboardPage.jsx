@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import Icon from '../components/Icon';
 import { getDueDate, isRequestOverdue } from '../utils/requestSla';
 

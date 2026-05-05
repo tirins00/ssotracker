@@ -26,6 +26,12 @@ public class AdminUserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Admin user not found: " + id));
     }
 
+    public AdminUser getAdminProfile(Long id) {
+        // Read-only profile view
+        return adminUserRepository.getAdminProfileById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin profile not found: " + id));
+    }
+
     @Transactional
     public AdminUser create(AdminUserRequest request) {
         if (adminUserRepository.existsByEmail(request.email())) {

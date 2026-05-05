@@ -39,6 +39,12 @@ public class AdminUserController {
         return AdminUserResponse.from(adminUserService.findById(id));
     }
 
+    @GetMapping("/profile/{id}")
+    AdminUserResponse getProfile(@PathVariable Long id) {
+        // Read-only profile view (not editable)
+        return AdminUserResponse.from(adminUserService.getAdminProfile(id));
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     AdminUserResponse create(@Valid @RequestBody AdminUserRequest request) {

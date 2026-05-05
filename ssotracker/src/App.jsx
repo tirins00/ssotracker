@@ -8,6 +8,7 @@ import StaffDashboardPage from './pages/StaffDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import SubmitRequestPage from './pages/SubmitRequestPage';
 import TrackRequestsPage from './pages/TrackRequestsPage';
+import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import FAQPage from './pages/FAQPage';
 import './styles/index.css';
@@ -44,6 +45,7 @@ const mapApiRequest = (request) => ({
   id: String(request.requestId),
   status: statusFromApi(request.status),
   createdAt: request.requestDate ? `${request.requestDate}T00:00:00.000Z` : new Date().toISOString(),
+  adminPingedAt: request.adminPingedAt || '',
   studentName: request.studentName || 'Unknown',
   studentEmail: request.studentEmail || '',
   assignedTo: request.assignedStaffEmail || '',
@@ -56,6 +58,34 @@ const mapApiRequest = (request) => ({
   purpose: request.purpose || request.requestType || '',
   notes: request.notes || '',
 });
+
+const notificationTypeFromApi = (type) => String(type || '').toLowerCase();
+
+const notificationTitle = (type) => {
+  const labels = {
+    submit: 'Request submitted',
+    status_update: 'Status updated',
+    overdue: 'Request overdue',
+    ping: 'Admin pinged',
+    assignment: 'Request assigned',
+  };
+  return labels[type] || 'Notification';
+};
+
+const mapApiNotification = (notification) => {
+  const type = notificationTypeFromApi(notification.notificationType);
+  return {
+    id: `api-${notification.notificationId}`,
+    requestId: notification.requestId ? String(notification.requestId) : '',
+    createdAt: notification.dateSent || new Date().toISOString(),
+    type,
+    title: notificationTitle(type),
+    message: notification.message,
+    documentType: notification.documentType || 'Document',
+    studentEmail: notification.studentEmail || '',
+    assignedStaffEmail: notification.assignedStaffEmail || '',
+  };
+};
 
 const loadRequests = () => {
   try {
@@ -142,8 +172,21 @@ const nameFromEmail = (email) => {
   return { firstName, lastName, displayName: `${lastName} ${firstName}` };
 };
 
+const notificationsForUser = (notifications, user) => {
+  if (!user) return [];
+  if (user.role === 'admin') {
+    return notifications.filter((n) => ['ping', 'submit', 'overdue'].includes(n.type));
+  }
+  if (user.role === 'staff') {
+    return notifications.filter((n) => n.assignedStaffEmail === user.email || n.type === 'ping');
+  }
+  return notifications.filter((n) => !n.studentEmail || n.studentEmail === user.email);
+};
+
 // Wraps all authenticated pages with the Sidebar layout
-const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin, notifications, currentPath, updateRequest, staffMembers, onAssignStaff, onMarkCompleted, onAssignSelf }) => {
+const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin, notifications, currentPath, updateRequest, staffMembers, onAssignStaff, onMarkCompleted, onAssignSelf, onUpdateProfile }) => {
+  const visibleNotifications = notificationsForUser(notifications, user);
+
   return (
     <div className="app-shell">
       <Sidebar user={user} onLogout={onLogout} currentPath={currentPath} />
@@ -153,7 +196,8 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin,
             <>
               <Route path="/"                  element={<Navigate to="/admin-dashboard" replace />} />
               <Route path="/admin-dashboard"   element={<AdminDashboardPage user={user} requests={requests} staffMembers={staffMembers} onAssignStaff={onAssignStaff} showToast={showToast} />} />
-              <Route path="/notifications"     element={<NotificationsPage notifications={notifications} />} />
+              <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
+              <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
               <Route path="/faq"               element={<FAQPage />} />
               <Route path="*"                  element={<Navigate to="/admin-dashboard" replace />} />
             </>
@@ -161,7 +205,8 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin,
             <>
               <Route path="/"                  element={<Navigate to="/staff-dashboard" replace />} />
               <Route path="/staff-dashboard"   element={<StaffDashboardPage user={user} requests={requests} onMarkCompleted={onMarkCompleted} onAssignSelf={onAssignSelf} />} />
-              <Route path="/notifications"     element={<NotificationsPage notifications={notifications} />} />
+              <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
+              <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
               <Route path="/faq"               element={<FAQPage />} />
               <Route path="*"                  element={<Navigate to="/staff-dashboard" replace />} />
             </>
@@ -171,7 +216,8 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin,
               <Route path="/dashboard"         element={<DashboardPage user={user} requests={requests} />} />
               <Route path="/submit"            element={<SubmitRequestPage showToast={showToast} onSubmitRequest={addRequest} user={user} />} />
               <Route path="/track"             element={<TrackRequestsPage requests={requests} onPingAdmin={pingAdmin} />} />
-              <Route path="/notifications"     element={<NotificationsPage notifications={notifications} />} />
+              <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
+              <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
               <Route path="/faq"               element={<FAQPage />} />
               <Route path="*"                  element={<Navigate to="/dashboard" replace />} />
             </>
@@ -240,10 +286,13 @@ const App = () => {
     setRequests((prev) => [savedRequest, ...prev]);
     addNotification({
       id: newId(),
+      requestId: savedRequest.id,
       createdAt: new Date().toISOString(),
       type: 'submit',
       title: savedRequest === req ? 'Request saved locally' : 'Request submitted',
       message: `Your request for "${savedRequest?.document?.title || 'Document'}" has been submitted.`,
+      documentType: savedRequest?.document?.title || 'Document',
+      studentEmail: savedRequest.studentEmail || user.email,
     });
   };
 
@@ -298,17 +347,43 @@ const App = () => {
     showToast('Request assigned to you');
   };
 
-  const pingAdmin = (req) => {
+  const pingAdmin = async (req) => {
     if (!req?.id) return;
-    updateRequest(req.id, { adminPingedAt: new Date().toISOString() });
-    addNotification({
-      id: newId(),
-      createdAt: new Date().toISOString(),
-      type: 'ping',
-      title: 'Request pinged',
-      message: `Student pinged for "${req?.document?.title || 'Document'}" request.`,
-    });
-    showToast('Admin has been notified about your overdue request.');
+    const pingedAt = new Date().toISOString();
+    updateRequest(req.id, { adminPingedAt: pingedAt });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests/${req.id}/ping-admin`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Unable to ping admin');
+      const notification = mapApiNotification(await response.json());
+      addNotification(notification);
+      showToast('Admin has been notified about your overdue request.');
+    } catch {
+      addNotification({
+        id: newId(),
+        requestId: req.id,
+        createdAt: pingedAt,
+        type: 'ping',
+        title: 'Admin pinged',
+        message: `Student pinged for "${req?.document?.title || 'Document'}" request.`,
+        documentType: req?.document?.title || 'Document',
+        studentEmail: req.studentEmail || user.email,
+      });
+      showToast('Backend is offline. Ping saved locally for now.');
+    }
+  };
+
+  const updateProfile = (profileData) => {
+    setUser((prev) => ({
+      ...prev,
+      email: profileData.email || prev.email,
+      firstName: profileData.firstName || prev.firstName,
+      lastName: profileData.lastName || prev.lastName,
+      displayName: `${profileData.lastName || prev.lastName} ${profileData.firstName || prev.firstName}`,
+    }));
+    showToast('Profile updated successfully!');
   };
 
   useEffect(() => {
@@ -318,11 +393,22 @@ const App = () => {
 
     const loadBackendRequests = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/document-requests`);
-        if (!response.ok) throw new Error('Unable to load document requests');
-        const data = await response.json();
-        if (active && Array.isArray(data)) {
-          setRequests(data.map(mapApiRequest).reverse());
+        const [requestResponse, notificationResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/document-requests`),
+          fetch(`${API_BASE_URL}/notifications`),
+        ]);
+
+        if (!requestResponse.ok) throw new Error('Unable to load document requests');
+        const requestData = await requestResponse.json();
+        if (active && Array.isArray(requestData)) {
+          setRequests(requestData.map(mapApiRequest).reverse());
+        }
+
+        if (notificationResponse.ok) {
+          const notificationData = await notificationResponse.json();
+          if (active && Array.isArray(notificationData)) {
+            setNotifications(notificationData.map(mapApiNotification));
+          }
         }
       } catch {
         // Keep local storage data when the backend is not running.
@@ -342,7 +428,7 @@ const App = () => {
     } catch {
       // Ignore storage failures (private mode, quota, etc.)
     }
-  }, [requests]);
+  }, [requests, user.email]);
 
   useEffect(() => {
     try {
@@ -362,16 +448,19 @@ const App = () => {
       changed = true;
       addNotification({
         id: newId(),
+        requestId: r.id,
         createdAt: new Date().toISOString(),
         type: 'overdue',
         title: 'Request overdue',
         message: `Your request for "${r?.document?.title || 'Document'}" is overdue. You can ping the admin from Track Requests.`,
+        documentType: r?.document?.title || 'Document',
+        studentEmail: r.studentEmail || user.email,
       });
       return { ...r, overdueNotifiedAt: new Date().toISOString() };
     });
 
     if (changed) setRequests(updated);
-  }, [requests]);
+  }, [requests, user.email]);
 
   return (
     <BrowserRouter>
@@ -401,6 +490,7 @@ const App = () => {
                 onAssignStaff={assignStaffToRequest}
                 onMarkCompleted={markRequestAsCompleted}
                 onAssignSelf={assignSelfToRequest}
+                onUpdateProfile={updateProfile}
               />
               {toast && <Toast message={toast} onDone={() => setToast(null)} />}
             </>

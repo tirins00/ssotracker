@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon';
 import { useTheme } from '../context/ThemeContext';
 
@@ -24,8 +24,13 @@ const ADMIN_NAV_ITEMS = [
 
 const Sidebar = ({ user, onLogout }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const avatarLetter = (user?.firstName?.[0] || user?.displayName?.[0] || '?').toUpperCase();
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+  };
 
   const getNavItems = () => {
     if (user?.role === 'admin') return ADMIN_NAV_ITEMS;
@@ -69,13 +74,13 @@ const Sidebar = ({ user, onLogout }) => {
 
       {/* User + Logout */}
       <div className="sidebar-bottom">
-        <div className="user-row">
+        <button className="user-row" onClick={handleProfileClick} style={{ cursor: 'pointer', border: 'none', background: 'none', width: '100%', padding: '0' }}>
           <div className="user-avatar">{avatarLetter}</div>
           <div className="user-info">
             <div className="uname">{user?.displayName || 'Student'}</div>
             <div className="uid">{user?.email || ''}</div>
           </div>
-        </div>
+        </button>
         <button className="logout-btn" onClick={toggleTheme} title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
           <Icon name={isDarkMode ? 'sun' : 'moon'} size={15} />
           {isDarkMode ? 'Light Mode' : 'Dark Mode'}

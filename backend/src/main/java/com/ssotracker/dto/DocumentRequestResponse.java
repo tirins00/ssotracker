@@ -4,6 +4,7 @@ import com.ssotracker.model.DocumentRequest;
 import com.ssotracker.model.RequestStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record DocumentRequestResponse(
         Long requestId,
@@ -14,6 +15,7 @@ public record DocumentRequestResponse(
         Integer queuePosition,
         String purpose,
         String notes,
+        LocalDateTime adminPingedAt,
         Long studentId,
         String studentEmail,
         String studentName,
@@ -37,6 +39,7 @@ public record DocumentRequestResponse(
                 request.getQueuePosition(),
                 request.getPurpose(),
                 request.getNotes(),
+                request.getAdminPingedAt(),
                 request.getStudent().getUserId(),
                 request.getStudent().getEmail(),
                 request.getStudent().getFirstName() + " " + request.getStudent().getLastName(),

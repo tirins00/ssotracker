@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
-    @EntityGraph(attributePaths = "documentRequest")
+    @Override
+    @EntityGraph(attributePaths = {"documentRequest", "documentRequest.student", "documentRequest.assignedStaff", "documentRequest.documentRequirement"})
+    List<Notification> findAll();
+
+    @EntityGraph(attributePaths = {"documentRequest", "documentRequest.student", "documentRequest.assignedStaff", "documentRequest.documentRequirement"})
     List<Notification> findByDocumentRequestRequestIdOrderByDateSentDesc(Long requestId);
 }

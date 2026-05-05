@@ -133,6 +133,7 @@ public class DocumentRequestService {
     @Transactional
     public Notification pingAdmin(Long requestId) {
         DocumentRequest documentRequest = findById(requestId);
+        documentRequest.setAdminPingedAt(LocalDateTime.now());
         return addNotification(documentRequest, NotificationType.PING, "Student pinged admin for overdue request follow-up.");
     }
 
