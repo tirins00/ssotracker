@@ -20,6 +20,7 @@ public record DocumentRequestResponse(
         Long documentId,
         String documentType,
         Long assignedStaffId,
+        String assignedStaffEmail,
         String assignedStaffName
 ) {
     public static DocumentRequestResponse from(DocumentRequest request) {
@@ -42,6 +43,7 @@ public record DocumentRequestResponse(
                 request.getDocumentRequirement().getDocumentId(),
                 request.getDocumentRequirement().getDocumentType(),
                 request.getAssignedStaff() == null ? null : request.getAssignedStaff().getStaffId(),
+                request.getAssignedStaff() == null ? null : request.getAssignedStaff().getEmail(),
                 staffName
         );
     }

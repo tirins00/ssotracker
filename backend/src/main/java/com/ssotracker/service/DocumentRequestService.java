@@ -1,6 +1,7 @@
 package com.ssotracker.service;
 
 import com.ssotracker.dto.DocumentRequestCreateRequest;
+import com.ssotracker.dto.RequestAssignmentRequest;
 import com.ssotracker.model.DocumentRequest;
 import com.ssotracker.model.Notification;
 import com.ssotracker.model.NotificationType;
@@ -97,14 +98,28 @@ public class DocumentRequestService {
     }
 
     @Transactional
-    public DocumentRequest assignStaff(Long requestId, Long staffId) {
+    public DocumentRequest assignStaff(Long requestId, RequestAssignmentRequest request) {
         DocumentRequest documentRequest = findById(requestId);
-        Staff staff = staffRepository.findById(staffId)
-                .orElseThrow(() -> new ResourceNotFoundException("Staff not found: " + staffId));
+        Staff staff = resolveStaff(request);
         documentRequest.setAssignedStaff(staff);
         documentRequest.setStatus(RequestStatus.IN_REVIEW);
         addNotification(documentRequest, NotificationType.ASSIGNMENT, "Request assigned to " + staff.getFirstname() + " " + staff.getLastname() + ".");
         return documentRequest;
+    }
+
+    private Staff resolveStaff(RequestAssignmentRequest request) {
+        if (request.staffId() != null) {
+            return staffRepository.findById(request.staffId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff not found: " + request.staffId()));
+        }
+
+        String email = request.staffEmail() == null ? "" : request.staffEmail().trim().toLowerCase();
+        if (email.isBlank()) {
+            throw new ResourceNotFoundException("Staff id or email is required.");
+        }
+
+        return staffRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found: " + email));
     }
 
     @Transactional

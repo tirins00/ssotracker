@@ -205,7 +205,7 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
                   )}
                 </div>
                 <div style={{ fontSize: '13.5px', color: '#555' }}>
-                  {r.assignedTo ? staffMembers.find((s) => s.email === r.assignedTo)?.name || 'Unknown' : '—'}
+                  {r.assignedTo ? r.assignedToName || staffMembers.find((s) => s.email === r.assignedTo)?.name || 'Unknown' : '—'}
                 </div>
                 <div className="req-action">
                   <select

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.ssotracker.controller.AdminUserControllerTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.974 s -- in com.ssotracker.controller.AdminUserControllerTest

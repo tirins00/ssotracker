@@ -46,7 +46,8 @@ const mapApiRequest = (request) => ({
   createdAt: request.requestDate ? `${request.requestDate}T00:00:00.000Z` : new Date().toISOString(),
   studentName: request.studentName || 'Unknown',
   studentEmail: request.studentEmail || '',
-  assignedTo: request.assignedStaffName || '',
+  assignedTo: request.assignedStaffEmail || '',
+  assignedToName: request.assignedStaffName || '',
   document: {
     id: request.documentId,
     title: request.documentType || request.requestType || 'Document',
@@ -251,14 +252,45 @@ const App = () => {
     setRequests((prev) => prev.map((r) => (r?.id === requestId ? { ...r, ...patch } : r)));
   };
 
-  const assignStaffToRequest = (requestId, staffEmail) => {
-    updateRequest(requestId, { assignedTo: staffEmail, status: 'In Review' });
-    showToast('Staff member assigned to request');
+  const assignStaffToRequest = async (requestId, staffEmail) => {
+    if (!requestId) return;
+    if (!staffEmail) {
+      updateRequest(requestId, { assignedTo: '', assignedToName: '', status: 'Pending' });
+      showToast('Staff assignment cleared locally');
+      return;
+    }
+
+    const staffName = staffMembers.find((staff) => staff.email === staffEmail)?.name || '';
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests/${requestId}/assignment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffEmail }),
+      });
+      if (!response.ok) throw new Error('Unable to assign staff');
+      updateRequest(requestId, mapApiRequest(await response.json()));
+      showToast('Staff member assigned to request');
+    } catch {
+      updateRequest(requestId, { assignedTo: staffEmail, assignedToName: staffName, status: 'In Review' });
+      showToast('Backend assignment failed. Assignment saved locally for now.');
+    }
   };
 
-  const markRequestAsCompleted = (requestId) => {
-    updateRequest(requestId, { status: 'Completed', completedAt: new Date().toISOString() });
-    showToast('Request marked as completed');
+  const markRequestAsCompleted = async (requestId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests/${requestId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'COMPLETED' }),
+      });
+      if (!response.ok) throw new Error('Unable to complete request');
+      updateRequest(requestId, { ...mapApiRequest(await response.json()), completedAt: new Date().toISOString() });
+      showToast('Request marked as completed');
+    } catch {
+      updateRequest(requestId, { status: 'Completed', completedAt: new Date().toISOString() });
+      showToast('Backend is offline. Completion saved locally for now.');
+    }
   };
 
   const assignSelfToRequest = (requestId) => {

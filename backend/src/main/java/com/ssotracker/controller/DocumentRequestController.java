@@ -52,7 +52,7 @@ public class DocumentRequestController {
 
     @PatchMapping("/{id}/assignment")
     DocumentRequestResponse assignStaff(@PathVariable Long id, @Valid @RequestBody RequestAssignmentRequest request) {
-        return DocumentRequestResponse.from(documentRequestService.assignStaff(id, request.staffId()));
+        return DocumentRequestResponse.from(documentRequestService.assignStaff(id, request));
     }
 
     @PatchMapping("/{id}/status")
