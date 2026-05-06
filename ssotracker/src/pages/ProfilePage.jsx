@@ -1,15 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
 
 const ProfilePage = ({ user = {}, onUpdateProfile }) => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState({
     email: user?.email || '',
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
   });
+
+  useEffect(() => {
+    setFormData({
+      email: user?.email || '',
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+    });
+  }, [user]);
 
   const handleBack = () => {
     navigate(-1);
@@ -20,11 +29,16 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleUpdate = () => {
-    if (onUpdateProfile) {
-      onUpdateProfile(formData);
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      if (onUpdateProfile) {
+        await onUpdateProfile(formData);
+      }
+      setIsEditing(false);
+    } finally {
+      setIsUpdating(false);
     }
-    setIsEditing(false);
   };
 
   const handleCancel = () => {
@@ -47,9 +61,13 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
 
       <div className="profile-card">
         <div className="profile-header">
+          <div className="profile-avatar">{`${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase() || 'U'}</div>
           <div className="profile-header-info">
             <h2>{user?.displayName || 'User'}</h2>
-            <p className="profile-role">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ''}</p>
+            <p className="profile-role">
+              {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ''}
+              {user?.email ? ` · ${user.email}` : ''}
+            </p>
           </div>
         </div>
 
@@ -137,8 +155,8 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
               <button className="btn-cancel" onClick={handleCancel}>
                 Cancel
               </button>
-              <button className="btn-update" onClick={handleUpdate}>
-                Update Profile
+              <button className="btn-update" onClick={handleUpdate} disabled={isUpdating}>
+                {isUpdating ? 'Updating...' : 'Update Profile'}
               </button>
             </>
           ) : (

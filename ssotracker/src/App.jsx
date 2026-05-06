@@ -229,11 +229,21 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin,
 };
 
 const App = () => {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const loadSavedUser = () => {
+    try {
+      const raw = localStorage.getItem('ssotracker.user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const savedUser = loadSavedUser();
+  const [loggedIn, setLoggedIn] = useState(() => !!savedUser?.email);
   const [toast,    setToast]    = useState(null);
   const [requests, setRequests] = useState(loadRequests);
   const [notifications, setNotifications] = useState(loadNotifications);
-  const [user,     setUser]     = useState({
+  const [user,     setUser]     = useState(() => savedUser || {
     displayName: 'Student',
     firstName: 'Student',
     lastName: '',
@@ -375,15 +385,36 @@ const App = () => {
     }
   };
 
-  const updateProfile = (profileData) => {
-    setUser((prev) => ({
-      ...prev,
-      email: profileData.email || prev.email,
-      firstName: profileData.firstName || prev.firstName,
-      lastName: profileData.lastName || prev.lastName,
-      displayName: `${profileData.lastName || prev.lastName} ${profileData.firstName || prev.firstName}`,
-    }));
-    showToast('Profile updated successfully!');
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/profile?email=${encodeURIComponent(user.email)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedProfile = await response.json();
+
+      setUser((prev) => ({
+        ...prev,
+        email: updatedProfile.email || prev.email,
+        firstName: updatedProfile.firstName || prev.firstName,
+        lastName: updatedProfile.lastName || prev.lastName,
+        displayName: `${updatedProfile.lastName || prev.lastName} ${updatedProfile.firstName || prev.firstName}`,
+        role: updatedProfile.role || prev.role,
+      }));
+
+      showToast('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      showToast('Failed to update profile. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -437,6 +468,22 @@ const App = () => {
       // Ignore storage failures (private mode, quota, etc.)
     }
   }, [notifications]);
+
+  useEffect(() => {
+    if (loggedIn && user?.email) {
+      try {
+        localStorage.setItem('ssotracker.user', JSON.stringify(user));
+      } catch {
+        // Ignore storage failures
+      }
+    } else {
+      try {
+        localStorage.removeItem('ssotracker.user');
+      } catch {
+        // Ignore storage failures
+      }
+    }
+  }, [loggedIn, user]);
 
   useEffect(() => {
     // Create a one-time notification when a request becomes overdue.
