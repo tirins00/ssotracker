@@ -67,5 +67,8 @@ public class AdminUserService {
         admin.setEmail(request.email());
         admin.setPosition(request.position());
         admin.setActive(request.active() == null || request.active());
+        if (request.password() != null && !request.password().isBlank()) {
+            admin.setPassword(request.password());
+        }
     }
 }

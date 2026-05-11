@@ -37,6 +37,9 @@ public class AdminUser {
     @Column(nullable = false)
     private String position;
 
+    @Column
+    private String password;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -81,6 +84,14 @@ public class AdminUser {
 
     public void setPosition(String position) {
         this.position = position;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public boolean isActive() {

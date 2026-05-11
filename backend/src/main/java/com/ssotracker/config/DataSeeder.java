@@ -29,6 +29,7 @@ public class DataSeeder {
                 admin.setLastName("Admin");
                 admin.setEmail("admin@cit.edu");
                 admin.setPosition("SSO Administrator");
+                admin.setPassword("Admin123!");
                 adminUserRepository.save(admin);
             }
 

@@ -1,15 +1,44 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+
 const LoginPage = ({ onLogin }) => {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [showPw,   setShowPw]   = useState(false);
   const [role,     setRole]     = useState('student');
+  const [error,    setError]    = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email && password) onLogin(email.trim(), role);
+    setError('');
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail || !password) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail, password, role }),
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(body || 'Invalid credentials');
+      }
+
+      const data = await response.json();
+      onLogin(data.email, data.role, data.firstName, data.lastName);
+    } catch (err) {
+      if (role === 'admin') {
+        setError('Admin login failed. Check username/password and backend availability.');
+        return;
+      }
+
+      // For student/staff roles, preserve existing local fallback if backend is unavailable.
+      onLogin(normalizedEmail, role);
+    }
   };
 
   return (
@@ -115,6 +144,7 @@ const LoginPage = ({ onLogin }) => {
                 </button>
               </div>
             </div>
+            {error && <div className="login-error">{error}</div>}
             <button type="submit" className="signin-btn">
               Sign In <Icon name="chevRight" size={17} color="#fff" />
             </button>

@@ -251,12 +251,7 @@ const App = () => {
     role: 'student',
   });
 
-  // Mock staff members list (in a real app, this would come from a backend)
-  const staffMembers = [
-    { email: 'staff1@cit.edu', name: 'Maria Santos' },
-    { email: 'staff2@cit.edu', name: 'Juan Dela Cruz' },
-    { email: 'staff3@cit.edu', name: 'Rosa Garcia' },
-  ];
+  const [staffMembers, setStaffMembers] = useState([]);
 
   const newId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -424,9 +419,10 @@ const App = () => {
 
     const loadBackendRequests = async () => {
       try {
-        const [requestResponse, notificationResponse] = await Promise.all([
+        const [requestResponse, notificationResponse, staffResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/document-requests`),
           fetch(`${API_BASE_URL}/notifications`),
+          fetch(`${API_BASE_URL}/staff`),
         ]);
 
         if (!requestResponse.ok) throw new Error('Unable to load document requests');
@@ -441,8 +437,24 @@ const App = () => {
             setNotifications(notificationData.map(mapApiNotification));
           }
         }
+
+        if (staffResponse.ok) {
+          const staffData = await staffResponse.json();
+          if (active && Array.isArray(staffData)) {
+            setStaffMembers(staffData.map(staff => ({
+              email: staff.email,
+              name: `${staff.firstname} ${staff.lastname}`
+            })));
+          }
+        }
       } catch {
         // Keep local storage data when the backend is not running.
+        // Also set default staff members for fallback
+        setStaffMembers([
+          { email: 'staff1@cit.edu', name: 'Maria Santos' },
+          { email: 'staff2@cit.edu', name: 'Juan Dela Cruz' },
+          { email: 'staff3@cit.edu', name: 'Rosa Garcia' },
+        ]);
       }
     };
 
@@ -547,8 +559,10 @@ const App = () => {
                 path="*"
                 element={(
                   <LoginPage
-                    onLogin={(email, role = 'student') => {
-                      const parsed = nameFromEmail(email);
+                    onLogin={(email, role = 'student', firstName, lastName) => {
+                      const parsed = firstName && lastName
+                        ? { firstName, lastName, displayName: `${lastName} ${firstName}` }
+                        : nameFromEmail(email);
                       setUser({ ...parsed, email, role });
                       setLoggedIn(true);
                     }}
