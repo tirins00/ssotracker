@@ -2,22 +2,20 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
 
+const getProfileFormData = (user = {}) => ({
+  email: user?.email || '',
+  firstName: user?.firstName || '',
+  lastName: user?.lastName || '',
+});
+
 const ProfilePage = ({ user = {}, onUpdateProfile }) => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [formData, setFormData] = useState({
-    email: user?.email || '',
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-  });
+  const [formData, setFormData] = useState(() => getProfileFormData(user));
 
   useEffect(() => {
-    setFormData({
-      email: user?.email || '',
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-    });
+    setFormData(getProfileFormData(user));
   }, [user]);
 
   const handleBack = () => {
@@ -32,21 +30,17 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
   const handleUpdate = async () => {
     setIsUpdating(true);
     try {
-      if (onUpdateProfile) {
-        await onUpdateProfile(formData);
+      const updated = onUpdateProfile ? await onUpdateProfile(formData) : true;
+      if (updated !== false) {
+        setIsEditing(false);
       }
-      setIsEditing(false);
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleCancel = () => {
-    setFormData({
-      email: user?.email || '',
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-    });
+    setFormData(getProfileFormData(user));
     setIsEditing(false);
   };
 
@@ -66,7 +60,7 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
             <h2>{user?.displayName || 'User'}</h2>
             <p className="profile-role">
               {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ''}
-              {user?.email ? ` · ${user.email}` : ''}
+              {user?.email ? ` - ${user.email}` : ''}
             </p>
           </div>
         </div>
@@ -74,8 +68,7 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
         <div className="profile-details">
           <div className="profile-section">
             <h3>Contact Information</h3>
-            
-            {/* Email Field */}
+
             <div className="profile-row">
               <span className="profile-label">Email</span>
               {isEditing ? (
@@ -87,11 +80,10 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
                   className="profile-input"
                 />
               ) : (
-                <span className="profile-value">{formData.email || '—'}</span>
+                <span className="profile-value">{formData.email || '-'}</span>
               )}
             </div>
 
-            {/* First Name Field */}
             <div className="profile-row">
               <span className="profile-label">First Name</span>
               {isEditing ? (
@@ -103,11 +95,10 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
                   className="profile-input"
                 />
               ) : (
-                <span className="profile-value">{formData.firstName || '—'}</span>
+                <span className="profile-value">{formData.firstName || '-'}</span>
               )}
             </div>
 
-            {/* Last Name Field */}
             <div className="profile-row">
               <span className="profile-label">Last Name</span>
               {isEditing ? (
@@ -119,7 +110,7 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
                   className="profile-input"
                 />
               ) : (
-                <span className="profile-value">{formData.lastName || '—'}</span>
+                <span className="profile-value">{formData.lastName || '-'}</span>
               )}
             </div>
 
@@ -148,7 +139,6 @@ const ProfilePage = ({ user = {}, onUpdateProfile }) => {
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="profile-actions">
           {isEditing ? (
             <>

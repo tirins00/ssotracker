@@ -34,7 +34,8 @@ class AdminUserControllerTest {
                 "Reyes",
                 "ana.reyes@cit.edu",
                 "Registrar Admin",
-                true
+                true,
+                "Admin123!"
         );
 
         String body = mockMvc.perform(post("/api/admin-users")
@@ -58,7 +59,8 @@ class AdminUserControllerTest {
                 "Reyes",
                 "ana.reyes@cit.edu",
                 "Senior Registrar Admin",
-                true
+                true,
+                "Admin123!"
         );
 
         mockMvc.perform(put("/api/admin-users/{id}", id)

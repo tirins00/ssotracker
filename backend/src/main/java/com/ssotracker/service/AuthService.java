@@ -14,6 +14,8 @@ import com.ssotracker.service.ResourceNotFoundException;
 @Service
 public class AuthService {
 
+    private static final String DEFAULT_ADMIN_EMAIL = "admin@cit.edu";
+
     private final AdminUserRepository adminUserRepository;
     private final StaffRepository staffRepository;
     private final StudentRepository studentRepository;
@@ -43,6 +45,10 @@ public class AuthService {
     }
 
     private AuthResponse loginAdmin(String email, String password) {
+        if (!DEFAULT_ADMIN_EMAIL.equals(email)) {
+            throw new ResourceNotFoundException("Invalid admin credentials");
+        }
+
         AdminUser admin = adminUserRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid admin credentials"));
         if (!admin.isActive()) {

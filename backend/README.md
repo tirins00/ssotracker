@@ -29,14 +29,23 @@ mvn spring-boot:run
 
 The API runs at `http://localhost:8080`.
 
-H2 database console:
+Default local admin login:
 
 ```text
-http://localhost:8080/h2-console
-JDBC URL: jdbc:h2:mem:ssotracker
-Username: sa
+Email: admin@cit.edu
+Password: Admin123!
+Role: Admin
+```
+
+By default, local runs use MySQL:
+
+```text
+JDBC URL: jdbc:mysql://localhost:3306/ssotracker
+Username: root
 Password: 
 ```
+
+If your MySQL password is not blank, set `DB_PASSWORD` before starting the app.
 
 ## Admin User CRUD
 

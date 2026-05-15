@@ -183,9 +183,16 @@ const notificationsForUser = (notifications, user) => {
   return notifications.filter((n) => !n.studentEmail || n.studentEmail === user.email);
 };
 
+const sameEmail = (left, right) => (
+  String(left || '').trim().toLowerCase() === String(right || '').trim().toLowerCase()
+);
+
 // Wraps all authenticated pages with the Sidebar layout
 const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin, notifications, currentPath, updateRequest, staffMembers, onAssignStaff, onMarkCompleted, onAssignSelf, onUpdateProfile }) => {
   const visibleNotifications = notificationsForUser(notifications, user);
+  const studentRequests = user?.role === 'student'
+    ? requests.filter((request) => request?.studentEmail && sameEmail(request.studentEmail, user.email))
+    : requests;
 
   return (
     <div className="app-shell">
@@ -213,9 +220,9 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin,
           ) : (
             <>
               <Route path="/"                  element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard"         element={<DashboardPage user={user} requests={requests} />} />
+              <Route path="/dashboard"         element={<DashboardPage user={user} requests={studentRequests} />} />
               <Route path="/submit"            element={<SubmitRequestPage showToast={showToast} onSubmitRequest={addRequest} user={user} />} />
-              <Route path="/track"             element={<TrackRequestsPage requests={requests} onPingAdmin={pingAdmin} />} />
+              <Route path="/track"             element={<TrackRequestsPage requests={studentRequests} onPingAdmin={pingAdmin} />} />
               <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
               <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
               <Route path="/faq"               element={<FAQPage />} />
@@ -406,9 +413,11 @@ const App = () => {
       }));
 
       showToast('Profile updated successfully!');
+      return true;
     } catch (error) {
       console.error('Error updating profile:', error);
       showToast('Failed to update profile. Please try again.');
+      return false;
     }
   };
 

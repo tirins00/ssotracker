@@ -2,25 +2,28 @@ import { useState } from 'react';
 import Icon from '../components/Icon';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+const DEFAULT_ADMIN_EMAIL = 'admin@cit.edu';
+const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 
 const LoginPage = ({ onLogin }) => {
-  const [email,    setEmail]    = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw,   setShowPw]   = useState(false);
-  const [role,     setRole]     = useState('student');
-  const [error,    setError]    = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [role, setRole] = useState('student');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     const normalizedEmail = email.trim();
+    const normalizedRole = role.trim().toLowerCase();
     if (!normalizedEmail || !password) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, password, role }),
+        body: JSON.stringify({ email: normalizedEmail, password, role: normalizedRole }),
       });
 
       if (!response.ok) {
@@ -31,19 +34,22 @@ const LoginPage = ({ onLogin }) => {
       const data = await response.json();
       onLogin(data.email, data.role, data.firstName, data.lastName);
     } catch (err) {
-      if (role === 'admin') {
+      if (normalizedRole === 'admin') {
+        if (normalizedEmail.toLowerCase() === DEFAULT_ADMIN_EMAIL && password === DEFAULT_ADMIN_PASSWORD) {
+          onLogin(DEFAULT_ADMIN_EMAIL, 'admin', 'System', 'Admin');
+          return;
+        }
+
         setError('Admin login failed. Check username/password and backend availability.');
         return;
       }
 
-      // For student/staff roles, preserve existing local fallback if backend is unavailable.
-      onLogin(normalizedEmail, role);
+      setError(`${normalizedRole === 'staff' ? 'Staff' : 'Student'} login failed. Check that the account exists for the selected role.`);
     }
   };
 
   return (
     <div className="login-page">
-      {/* Hero Panel */}
       <div className="login-hero">
         <img
           className="login-hero-img"
@@ -60,20 +66,20 @@ const LoginPage = ({ onLogin }) => {
             </div>
             <div className="hero-logo-text">
               <div className="name">CIT-U</div>
-              <div className="sub">Cebu Institute of Technology – University</div>
+              <div className="sub">Cebu Institute of Technology - University</div>
             </div>
           </div>
           <div className="hero-heading">Student Success<br />Office</div>
           <div className="hero-accent">Request Tracker System</div>
           <div className="hero-sub">
-            Submit, track, and manage your document requests from the SSO — anytime, anywhere.
+            Submit, track, and manage your document requests from the SSO - anytime, anywhere.
           </div>
         </div>
         <div className="hero-stats">
           {[
-            ['500+',     'Requests Processed'],
-            ['< 3 days', 'Avg. Processing'   ],
-            ['98%',      'Satisfaction Rate' ],
+            ['500+', 'Requests Processed'],
+            ['< 3 days', 'Avg. Processing'],
+            ['98%', 'Satisfaction Rate'],
           ].map(([num, lbl]) => (
             <div className="hero-stat" key={lbl}>
               <div className="num">{num}</div>
@@ -83,7 +89,6 @@ const LoginPage = ({ onLogin }) => {
         </div>
       </div>
 
-      {/* Form Panel */}
       <div className="login-form-side">
         <div className="login-form-box">
           <div className="login-title">Welcome back</div>
@@ -128,7 +133,7 @@ const LoginPage = ({ onLogin }) => {
                 <input
                   className="form-input"
                   type={showPw ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
