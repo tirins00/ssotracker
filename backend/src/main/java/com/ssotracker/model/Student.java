@@ -40,6 +40,12 @@ public class Student {
     @Column(name = "year_level", nullable = false)
     private Integer yearLevel;
 
+    @Column
+    private String password;
+
+    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default false")
+    private boolean mustChangePassword = false;
+
     @OneToMany(mappedBy = "student")
     private List<DocumentRequest> documentRequests = new ArrayList<>();
 
@@ -81,5 +87,21 @@ public class Student {
 
     public void setYearLevel(Integer yearLevel) {
         this.yearLevel = yearLevel;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

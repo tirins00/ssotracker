@@ -34,31 +34,44 @@ public class AdminUserService {
 
     @Transactional
     public AdminUser create(AdminUserRequest request) {
+        if (adminUserRepository.count() > 0) {
+            throw new DuplicateEmailException("Only one admin account is allowed.");
+        }
         if (adminUserRepository.existsByEmail(request.email())) {
             throw new DuplicateEmailException("Email already exists: " + request.email());
         }
 
         AdminUser admin = new AdminUser();
         apply(admin, request);
+        admin.setEmail("Admin@cit.edu");
+        admin.setPassword("Admin123!");
+        admin.setMustChangePassword(false);
+        admin.setActive(true);
         return adminUserRepository.save(admin);
     }
 
     @Transactional
     public AdminUser update(Long id, AdminUserRequest request) {
         AdminUser admin = findById(id);
-        adminUserRepository.findByEmail(request.email())
-                .filter(existing -> !existing.getAdminId().equals(id))
-                .ifPresent(existing -> {
-                    throw new DuplicateEmailException("Email already exists: " + request.email());
-                });
         apply(admin, request);
+        admin.setEmail("Admin@cit.edu");
+        admin.setPassword("Admin123!");
+        admin.setMustChangePassword(false);
+        admin.setActive(true);
         return admin;
     }
 
     @Transactional
     public void delete(Long id) {
+        throw new DuplicateEmailException("The only admin account cannot be deleted.");
+    }
+
+    @Transactional
+    public AdminUser updatePassword(Long id, String password) {
         AdminUser admin = findById(id);
-        adminUserRepository.delete(admin);
+        admin.setPassword(password);
+        admin.setMustChangePassword(false);
+        return admin;
     }
 
     private void apply(AdminUser admin, AdminUserRequest request) {
@@ -69,6 +82,7 @@ public class AdminUserService {
         admin.setActive(request.active() == null || request.active());
         if (request.password() != null && !request.password().isBlank()) {
             admin.setPassword(request.password());
+            admin.setMustChangePassword(false);
         }
     }
 }

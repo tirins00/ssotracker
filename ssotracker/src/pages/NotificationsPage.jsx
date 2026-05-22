@@ -31,13 +31,30 @@ const iconFor = (type, isDarkMode = false) => {
   return { name: 'bell', bg: '#2d2d2d', color: '#999' };
 };
 
-const NotificationsPage = ({ notifications = [] }) => {
+const NotificationsPage = ({ notifications = [], onDeleteNotification, onDeleteAllNotifications }) => {
   const { isDarkMode } = useTheme();
   
   return (
     <div>
-      <div className="page-title">Notifications</div>
-      <div className="page-sub">Stay updated on your request status</div>
+      <div className="notif-header">
+        <div>
+          <div className="page-title">Notifications</div>
+          <div className="page-sub">Stay updated on your request status</div>
+        </div>
+        {notifications.length > 0 && (
+          <button
+            className="track-clear danger"
+            type="button"
+            onClick={() => {
+              if (typeof onDeleteAllNotifications === 'function') {
+                onDeleteAllNotifications(notifications);
+              }
+            }}
+          >
+            Delete all
+          </button>
+        )}
+      </div>
 
       {notifications.length === 0 ? (
         <div className="notif-empty">
@@ -57,7 +74,20 @@ const NotificationsPage = ({ notifications = [] }) => {
                   <div className="notif-title">{n.title}</div>
                   <div className="notif-msg">{n.message}</div>
                 </div>
-                <div className="notif-time">{formatDateTime(n.createdAt)}</div>
+                <div className="notif-side">
+                  <div className="notif-time">{formatDateTime(n.createdAt)}</div>
+                  <button
+                    className="notif-delete"
+                    type="button"
+                    title="Delete notification"
+                    aria-label={`Delete notification: ${n.title || 'Notification'}`}
+                    onClick={() => {
+                      if (typeof onDeleteNotification === 'function') onDeleteNotification(n);
+                    }}
+                  >
+                    <Icon name="trash" size={15} />
+                  </button>
+                </div>
               </div>
             );
           })}

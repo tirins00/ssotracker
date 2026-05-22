@@ -170,22 +170,6 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
     });
   };
 
-  const deleteAdmin = async (adminId) => {
-    setAdminCrudLoading(true);
-    setAdminCrudError('');
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin-users/${adminId}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Unable to delete admin user');
-      await loadAdminUsers();
-      if (editingAdminId === adminId) resetAdminForm();
-      notify('Admin user deleted');
-    } catch (error) {
-      setAdminCrudError('Admin user could not be deleted.');
-    } finally {
-      setAdminCrudLoading(false);
-    }
-  };
-
   // Staff form handlers
   const handleStaffField = (field, value) => {
     setStaffForm((current) => ({ ...current, [field]: value }));
@@ -246,6 +230,28 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
     }
   };
 
+  const changeStaffPassword = async (staff) => {
+    const password = window.prompt(`Set password for ${staff.firstname} ${staff.lastname}`, staff.password || '123456');
+    if (!password) return;
+
+    setStaffCrudLoading(true);
+    setStaffCrudError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/staff/${staff.staffId}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) throw new Error('Unable to update staff password');
+      await loadStaffUsers();
+      notify('Staff password updated');
+    } catch (error) {
+      setStaffCrudError('Staff password could not be updated.');
+    } finally {
+      setStaffCrudLoading(false);
+    }
+  };
+
   // Student form handlers
   const handleStudentField = (field, value) => {
     setStudentForm((current) => ({ ...current, [field]: value }));
@@ -301,6 +307,28 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
       notify('Student deleted');
     } catch (error) {
       setStudentCrudError('Student could not be deleted.');
+    } finally {
+      setStudentCrudLoading(false);
+    }
+  };
+
+  const changeStudentPassword = async (student) => {
+    const password = window.prompt(`Set password for ${student.firstName} ${student.lastName}`, student.password || '123456');
+    if (!password) return;
+
+    setStudentCrudLoading(true);
+    setStudentCrudError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/${student.userId}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!response.ok) throw new Error('Unable to update student password');
+      await loadStudents();
+      notify('Student password updated');
+    } catch (error) {
+      setStudentCrudError('Student password could not be updated.');
     } finally {
       setStudentCrudLoading(false);
     }
@@ -524,12 +552,13 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
                       <span className={`status-badge ${admin.active ? 'status-completed' : 'status-rejected'}`}>
                         {admin.active ? 'Active' : 'Inactive'}
                       </span>
+                      {admin.mustChangePassword && <span className="overdue-badge">Initial password</span>}
                     </div>
                     <div className="admin-user-actions">
                       <button className="track-clear" type="button" onClick={() => editAdmin(admin)}>
                         Edit
                       </button>
-                      <button className="track-clear danger" type="button" onClick={() => deleteAdmin(admin.adminId)}>
+                      <button className="track-clear danger" type="button" disabled title="The system keeps one fixed admin account">
                         Delete
                       </button>
                     </div>
@@ -599,6 +628,7 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
                 <div>Name</div>
                 <div>Email</div>
                 <div>Position</div>
+                <div>Password</div>
                 <div>Actions</div>
               </div>
               {staffUsers.length === 0 ? (
@@ -609,9 +639,13 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
                     <div className="req-title">{staff.firstname} {staff.lastname}</div>
                     <div className="req-sub">{staff.email}</div>
                     <div>{staff.position}</div>
+                    <div className="req-sub">{staff.password || '-'}</div>
                     <div className="admin-user-actions">
                       <button className="track-clear" type="button" onClick={() => editStaff(staff)}>
                         Edit
+                      </button>
+                      <button className="track-clear" type="button" onClick={() => changeStaffPassword(staff)}>
+                        Password
                       </button>
                       <button className="track-clear danger" type="button" onClick={() => deleteStaff(staff.staffId)}>
                         Delete
@@ -686,6 +720,7 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
                 <div>Name</div>
                 <div>Email</div>
                 <div>Year Level</div>
+                <div>Password</div>
                 <div>Actions</div>
               </div>
               {students.length === 0 ? (
@@ -696,9 +731,13 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
                     <div className="req-title">{student.firstName} {student.lastName}</div>
                     <div className="req-sub">{student.email}</div>
                     <div>{student.yearLevel}</div>
+                    <div className="req-sub">{student.password || '-'}</div>
                     <div className="admin-user-actions">
                       <button className="track-clear" type="button" onClick={() => editStudent(student)}>
                         Edit
+                      </button>
+                      <button className="track-clear" type="button" onClick={() => changeStudentPassword(student)}>
+                        Password
                       </button>
                       <button className="track-clear danger" type="button" onClick={() => deleteStudent(student.userId)}>
                         Delete
@@ -711,6 +750,143 @@ const AdminDashboardPage = ({ user, requests = [], staffMembers = [], onAssignSt
           </>
         )}
       </div>
+
+      {editingStaffId && (
+        <div className="admin-edit-overlay" role="presentation" onMouseDown={resetStaffForm}>
+          <form className="admin-edit-modal" onSubmit={handleStaffSubmit} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="admin-edit-header">
+              <div>
+                <h3>Edit Staff Information</h3>
+                <p>Update staff account details without leaving this list.</p>
+              </div>
+              <button className="admin-edit-close" type="button" onClick={resetStaffForm} aria-label="Close editor">
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+
+            <div className="admin-edit-fields">
+              <label>
+                <span>First Name</span>
+                <input
+                  className="form-input"
+                  value={staffForm.firstname}
+                  onChange={(e) => handleStaffField('firstname', e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Last Name</span>
+                <input
+                  className="form-input"
+                  value={staffForm.lastname}
+                  onChange={(e) => handleStaffField('lastname', e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Email</span>
+                <input
+                  className="form-input"
+                  type="email"
+                  value={staffForm.email}
+                  onChange={(e) => handleStaffField('email', e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Position</span>
+                <input
+                  className="form-input"
+                  value={staffForm.position}
+                  onChange={(e) => handleStaffField('position', e.target.value)}
+                  required
+                />
+              </label>
+            </div>
+
+            {staffCrudError && <div className="admin-crud-error">{staffCrudError}</div>}
+
+            <div className="admin-edit-actions">
+              <button className="btn-next" type="submit" disabled={staffCrudLoading}>
+                {staffCrudLoading ? 'Updating...' : 'Update'}
+              </button>
+              <button className="btn-back" type="button" onClick={resetStaffForm}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingStudentId && (
+        <div className="admin-edit-overlay" role="presentation" onMouseDown={resetStudentForm}>
+          <form className="admin-edit-modal" onSubmit={handleStudentSubmit} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="admin-edit-header">
+              <div>
+                <h3>Edit Student Information</h3>
+                <p>Update student account details without leaving this list.</p>
+              </div>
+              <button className="admin-edit-close" type="button" onClick={resetStudentForm} aria-label="Close editor">
+                <Icon name="x" size={18} />
+              </button>
+            </div>
+
+            <div className="admin-edit-fields">
+              <label>
+                <span>First Name</span>
+                <input
+                  className="form-input"
+                  value={studentForm.firstName}
+                  onChange={(e) => handleStudentField('firstName', e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Last Name</span>
+                <input
+                  className="form-input"
+                  value={studentForm.lastName}
+                  onChange={(e) => handleStudentField('lastName', e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Email</span>
+                <input
+                  className="form-input"
+                  type="email"
+                  value={studentForm.email}
+                  onChange={(e) => handleStudentField('email', e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                <span>Year Level</span>
+                <input
+                  className="form-input"
+                  type="number"
+                  value={studentForm.yearLevel}
+                  onChange={(e) => handleStudentField('yearLevel', parseInt(e.target.value, 10) || 1)}
+                  min="1"
+                  max="5"
+                  required
+                />
+              </label>
+            </div>
+
+            {studentCrudError && <div className="admin-crud-error">{studentCrudError}</div>}
+
+            <div className="admin-edit-actions">
+              <button className="btn-next" type="submit" disabled={studentCrudLoading}>
+                {studentCrudLoading ? 'Updating...' : 'Update'}
+              </button>
+              <button className="btn-back" type="button" onClick={resetStudentForm}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

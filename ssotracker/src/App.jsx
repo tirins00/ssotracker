@@ -76,6 +76,7 @@ const mapApiNotification = (notification) => {
   const type = notificationTypeFromApi(notification.notificationType);
   return {
     id: `api-${notification.notificationId}`,
+    apiId: notification.notificationId,
     requestId: notification.requestId ? String(notification.requestId) : '',
     createdAt: notification.dateSent || new Date().toISOString(),
     type,
@@ -188,47 +189,59 @@ const sameEmail = (left, right) => (
 );
 
 // Wraps all authenticated pages with the Sidebar layout
-const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin, notifications, currentPath, updateRequest, staffMembers, onAssignStaff, onMarkCompleted, onAssignSelf, onUpdateProfile }) => {
+const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin, notifications, currentPath, updateRequest, staffMembers, onAssignStaff, onMarkCompleted, onAssignSelf, onUpdateProfile, onDeleteNotification, onDeleteAllNotifications }) => {
   const visibleNotifications = notificationsForUser(notifications, user);
   const studentRequests = user?.role === 'student'
     ? requests.filter((request) => request?.studentEmail && sameEmail(request.studentEmail, user.email))
     : requests;
+
+  // Show password change page for any role with mustChangePassword flag
+  if (user.mustChangePassword) {
+    return (
+      <div className="app-shell">
+        <Sidebar user={user} onLogout={onLogout} currentPath={currentPath} />
+        <main className="main-content">
+          <ProfilePage user={user} onUpdatePassword={onUpdateProfile} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
       <Sidebar user={user} onLogout={onLogout} currentPath={currentPath} />
       <main className="main-content">
         <Routes>
-          {user.role === 'admin' ? (
-            <>
-              <Route path="/"                  element={<Navigate to="/admin-dashboard" replace />} />
-              <Route path="/admin-dashboard"   element={<AdminDashboardPage user={user} requests={requests} staffMembers={staffMembers} onAssignStaff={onAssignStaff} showToast={showToast} />} />
-              <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
-              <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
-              <Route path="/faq"               element={<FAQPage />} />
-              <Route path="*"                  element={<Navigate to="/admin-dashboard" replace />} />
-            </>
-          ) : user.role === 'staff' ? (
-            <>
-              <Route path="/"                  element={<Navigate to="/staff-dashboard" replace />} />
-              <Route path="/staff-dashboard"   element={<StaffDashboardPage user={user} requests={requests} onMarkCompleted={onMarkCompleted} onAssignSelf={onAssignSelf} />} />
-              <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
-              <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
-              <Route path="/faq"               element={<FAQPage />} />
-              <Route path="*"                  element={<Navigate to="/staff-dashboard" replace />} />
-            </>
-          ) : (
-            <>
-              <Route path="/"                  element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard"         element={<DashboardPage user={user} requests={studentRequests} />} />
-              <Route path="/submit"            element={<SubmitRequestPage showToast={showToast} onSubmitRequest={addRequest} user={user} />} />
-              <Route path="/track"             element={<TrackRequestsPage requests={studentRequests} onPingAdmin={pingAdmin} />} />
-              <Route path="/profile"           element={<ProfilePage user={user} onUpdateProfile={onUpdateProfile} />} />
-              <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} />} />
-              <Route path="/faq"               element={<FAQPage />} />
-              <Route path="*"                  element={<Navigate to="/dashboard" replace />} />
-            </>
-          )}
+        {user.role === 'admin' ? (
+          <>
+            <Route path="/"                  element={<Navigate to="/admin-dashboard" replace />} />
+            <Route path="/admin-dashboard"   element={<AdminDashboardPage user={user} requests={requests} staffMembers={staffMembers} onAssignStaff={onAssignStaff} showToast={showToast} />} />
+            <Route path="/profile"           element={<ProfilePage user={user} onUpdatePassword={onUpdateProfile} />} />
+            <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} onDeleteNotification={onDeleteNotification} onDeleteAllNotifications={onDeleteAllNotifications} />} />
+            <Route path="/faq"               element={<FAQPage />} />
+            <Route path="*"                  element={<Navigate to="/admin-dashboard" replace />} />
+          </>
+        ) : user.role === 'staff' ? (
+          <>
+            <Route path="/"                  element={<Navigate to="/staff-dashboard" replace />} />
+            <Route path="/staff-dashboard"   element={<StaffDashboardPage user={user} requests={requests} onMarkCompleted={onMarkCompleted} onAssignSelf={onAssignSelf} />} />
+            <Route path="/profile"           element={<ProfilePage user={user} onUpdatePassword={onUpdateProfile} />} />
+            <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} onDeleteNotification={onDeleteNotification} onDeleteAllNotifications={onDeleteAllNotifications} />} />
+            <Route path="/faq"               element={<FAQPage />} />
+            <Route path="*"                  element={<Navigate to="/staff-dashboard" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/"                  element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard"         element={<DashboardPage user={user} requests={studentRequests} />} />
+            <Route path="/submit"            element={<SubmitRequestPage showToast={showToast} onSubmitRequest={addRequest} user={user} />} />
+            <Route path="/track"             element={<TrackRequestsPage requests={studentRequests} onPingAdmin={pingAdmin} />} />
+            <Route path="/profile"           element={<ProfilePage user={user} onUpdatePassword={onUpdateProfile} />} />
+            <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} onDeleteNotification={onDeleteNotification} onDeleteAllNotifications={onDeleteAllNotifications} />} />
+            <Route path="/faq"               element={<FAQPage />} />
+            <Route path="*"                  element={<Navigate to="/dashboard" replace />} />
+          </>
+        )}
         </Routes>
       </main>
     </div>
@@ -269,6 +282,57 @@ const App = () => {
   const addNotification = (notif) => {
     if (!notif) return;
     setNotifications((prev) => [notif, ...prev]);
+  };
+
+  const deleteNotification = async (notification) => {
+    if (!notification?.id) return;
+
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+
+    const apiId = notification.apiId || String(notification.id).replace(/^api-/, '');
+    if (!apiId || String(apiId) === String(notification.id)) {
+      showToast('Notification deleted');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/${apiId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Unable to delete notification');
+      showToast('Notification deleted');
+    } catch {
+      showToast('Notification deleted locally');
+    }
+  };
+
+  const deleteAllNotifications = async (items = []) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    const idsToDelete = new Set(items.map((n) => n?.id).filter(Boolean));
+    setNotifications((prev) => prev.filter((n) => !idsToDelete.has(n.id)));
+
+    const apiIds = items
+      .map((n) => n?.apiId || (String(n?.id || '').startsWith('api-') ? String(n.id).replace(/^api-/, '') : ''))
+      .filter((apiId, index, all) => apiId && all.indexOf(apiId) === index);
+
+    const hasApiDeletes = apiIds.length > 0;
+    if (!hasApiDeletes) {
+      showToast('All notifications deleted');
+      return;
+    }
+
+    try {
+      await Promise.all(apiIds.map(async (apiId) => {
+        const response = await fetch(`${API_BASE_URL}/notifications/${apiId}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Unable to delete notification');
+      }));
+      showToast('All notifications deleted');
+    } catch {
+      showToast('Notifications deleted locally');
+    }
   };
 
   const addRequest = async (req) => {
@@ -387,36 +451,76 @@ const App = () => {
     }
   };
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = async ({ password, firstName, lastName }) => {
+    if (!user?.role || !user?.userId) {
+      showToast('Unable to update profile.');
+      return false;
+    }
+
     try {
-      const response = await fetch(`${API_BASE_URL}/users/profile?email=${encodeURIComponent(user.email)}`, {
+      if (!password && (firstName || lastName)) {
+        const response = await fetch(`${API_BASE_URL}/users/profile?email=${encodeURIComponent(user.email)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ firstName, lastName }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update profile');
+        }
+
+        const updatedUser = await response.json();
+        setUser((prev) => ({
+          ...prev,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          displayName: `${updatedUser.lastName} ${updatedUser.firstName}`,
+          email: updatedUser.email || prev.email,
+        }));
+
+        showToast('Profile updated successfully!');
+        return true;
+      }
+
+      let endpoint = '';
+
+      if (user.role === 'admin') {
+        endpoint = `/admin-users/${user.userId}/password`;
+      } else if (user.role === 'staff') {
+        endpoint = `/staff/${user.userId}/password`;
+      } else if (user.role === 'student') {
+        endpoint = `/students/${user.userId}/password`;
+      } else {
+        showToast('Unable to identify user role. Please log in again.');
+        return false;
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify({ password }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        throw new Error('Failed to update password');
       }
 
-      const updatedProfile = await response.json();
+      await response.json();
 
       setUser((prev) => ({
         ...prev,
-        email: updatedProfile.email || prev.email,
-        firstName: updatedProfile.firstName || prev.firstName,
-        lastName: updatedProfile.lastName || prev.lastName,
-        displayName: `${updatedProfile.lastName || prev.lastName} ${updatedProfile.firstName || prev.firstName}`,
-        role: updatedProfile.role || prev.role,
+        mustChangePassword: false,
       }));
 
-      showToast('Profile updated successfully!');
+      showToast('Password updated successfully!');
       return true;
     } catch (error) {
-      console.error('Error updating profile:', error);
-      showToast('Failed to update profile. Please try again.');
+      console.error('Error updating password:', error);
+      showToast('Failed to update password. Please try again.');
       return false;
     }
   };
@@ -559,6 +663,8 @@ const App = () => {
                 onMarkCompleted={markRequestAsCompleted}
                 onAssignSelf={assignSelfToRequest}
                 onUpdateProfile={updateProfile}
+                onDeleteNotification={deleteNotification}
+                onDeleteAllNotifications={deleteAllNotifications}
               />
               {toast && <Toast message={toast} onDone={() => setToast(null)} />}
             </>
@@ -568,11 +674,22 @@ const App = () => {
                 path="*"
                 element={(
                   <LoginPage
-                    onLogin={(email, role = 'student', firstName, lastName) => {
-                      const parsed = firstName && lastName
-                        ? { firstName, lastName, displayName: `${lastName} ${firstName}` }
-                        : nameFromEmail(email);
-                      setUser({ ...parsed, email, role });
+                    onLogin={(loginData) => {
+                      const data = typeof loginData === 'object' && loginData !== null
+                        ? loginData
+                        : {};
+                      const parsed = data.firstName && data.lastName
+                        ? { firstName: data.firstName, lastName: data.lastName, displayName: data.displayName || `${data.lastName} ${data.firstName}` }
+                        : nameFromEmail(data.email);
+                      setUser({
+                        ...parsed,
+                        email: data.email,
+                        userId: data.userId || null,
+                        role: data.role || 'student',
+                        position: data.position || '',
+                        active: data.active,
+                        mustChangePassword: Boolean(data.mustChangePassword),
+                      });
                       setLoggedIn(true);
                     }}
                   />

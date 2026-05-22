@@ -11,6 +11,8 @@ import java.util.List;
 @Service
 public class StaffService {
 
+    public static final String DEFAULT_PASSWORD = "123456";
+
     private final StaffRepository staffRepository;
 
     public StaffService(StaffRepository staffRepository) {
@@ -28,19 +30,21 @@ public class StaffService {
 
     @Transactional
     public Staff create(StaffRequest request) {
-        if (staffRepository.findByEmail(request.email()).isPresent()) {
+        if (staffRepository.findByEmailIgnoreCase(request.email()).isPresent()) {
             throw new DuplicateEmailException("Email already exists: " + request.email());
         }
 
         Staff staff = new Staff();
         apply(staff, request);
+        staff.setPassword(DEFAULT_PASSWORD);
+        staff.setMustChangePassword(true);
         return staffRepository.save(staff);
     }
 
     @Transactional
     public Staff update(Long id, StaffRequest request) {
         Staff staff = findById(id);
-        staffRepository.findByEmail(request.email())
+        staffRepository.findByEmailIgnoreCase(request.email())
                 .filter(existing -> !existing.getStaffId().equals(id))
                 .ifPresent(existing -> {
                     throw new DuplicateEmailException("Email already exists: " + request.email());
@@ -53,6 +57,14 @@ public class StaffService {
     public void delete(Long id) {
         Staff staff = findById(id);
         staffRepository.delete(staff);
+    }
+
+    @Transactional
+    public Staff updatePassword(Long id, String password) {
+        Staff staff = findById(id);
+        staff.setPassword(password);
+        staff.setMustChangePassword(false);
+        return staff;
     }
 
     private void apply(Staff staff, StaffRequest request) {

@@ -11,6 +11,7 @@ public record AdminUserResponse(
         String email,
         String position,
         boolean active,
+        boolean mustChangePassword,
         LocalDateTime createdAt
 ) {
     public static AdminUserResponse from(AdminUser adminUser) {
@@ -21,6 +22,7 @@ public record AdminUserResponse(
                 adminUser.getEmail(),
                 adminUser.getPosition(),
                 adminUser.isActive(),
+                adminUser.isMustChangePassword(),
                 adminUser.getCreatedAt()
         );
     }

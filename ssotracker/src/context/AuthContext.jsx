@@ -22,35 +22,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = (email, role = 'student') => {
-    const nameFromEmail = (emailStr) => {
-      const raw = (emailStr || '').trim().toLowerCase();
-      const local = raw.split('@')[0] || '';
-      const parts = local.split(/[._-]+/).filter(Boolean);
-      
-      if (parts.length >= 2) {
-        const first = parts[0];
-        const last = parts[parts.length - 1];
-        return {
-          firstName: capitalize(first),
-          lastName: capitalize(last),
-          displayName: `${capitalize(last)} ${capitalize(first)}`,
-        };
-      }
-      
-      const s = parts[0] || local;
-      return { firstName: capitalize(s), lastName: '', displayName: capitalize(s) };
-    };
-
-    const capitalize = (str) => {
-      return (str || '').charAt(0).toUpperCase() + (str || '').slice(1).toLowerCase();
-    };
-
-    const userInfo = nameFromEmail(email);
+  const login = (authResponse) => {
+    if (!authResponse) return;
+    
+    // Store the complete auth response from the backend
     const newUser = {
-      email,
-      role,
-      ...userInfo,
+      userId: authResponse.userId,
+      email: authResponse.email,
+      role: authResponse.role,
+      firstName: authResponse.firstName,
+      lastName: authResponse.lastName,
+      displayName: authResponse.displayName,
+      position: authResponse.position,
+      active: authResponse.active,
+      mustChangePassword: authResponse.mustChangePassword,
     };
     setUser(newUser);
   };
@@ -64,10 +49,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updates) => {
+    setUser(prev => prev ? { ...prev, ...updates } : null);
+  };
+
   const isLoggedIn = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoggedIn }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoggedIn }}>
       {children}
     </AuthContext.Provider>
   );

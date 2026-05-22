@@ -2,6 +2,7 @@ package com.ssotracker.controller;
 
 import com.ssotracker.dto.StudentRequest;
 import com.ssotracker.dto.StudentResponse;
+import com.ssotracker.dto.AdminPasswordUpdateRequest;
 import com.ssotracker.service.StudentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,11 @@ public class StudentController {
     @PutMapping("/{id}")
     StudentResponse update(@PathVariable Long id, @Valid @RequestBody StudentRequest request) {
         return StudentResponse.from(studentService.update(id, request));
+    }
+
+    @PutMapping("/{id}/password")
+    StudentResponse updatePassword(@PathVariable Long id, @Valid @RequestBody AdminPasswordUpdateRequest request) {
+        return StudentResponse.from(studentService.updatePassword(id, request.password()));
     }
 
     @DeleteMapping("/{id}")

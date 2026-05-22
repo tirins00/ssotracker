@@ -12,8 +12,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Comparator;
+import java.util.List;
+
 @Configuration
 public class DataSeeder {
+
+    private static final String ADMIN_EMAIL = "Admin@cit.edu";
+    private static final String ADMIN_PASSWORD = "Admin123!";
 
     @Bean
     CommandLineRunner seedIncrementData(
@@ -23,14 +29,21 @@ public class DataSeeder {
             DocumentRequirementRepository requirementRepository
     ) {
         return args -> {
-            if (adminUserRepository.count() == 0) {
-                AdminUser admin = new AdminUser();
-                admin.setFirstName("System");
-                admin.setLastName("Admin");
-                admin.setEmail("admin@cit.edu");
-                admin.setPosition("SSO Administrator");
-                admin.setPassword("Admin123!");
-                adminUserRepository.save(admin);
+            List<AdminUser> admins = adminUserRepository.findAll().stream()
+                    .sorted(Comparator.comparing(AdminUser::getAdminId))
+                    .toList();
+            AdminUser admin = admins.isEmpty() ? new AdminUser() : admins.get(0);
+            admin.setFirstName(admin.getFirstName() == null || admin.getFirstName().isBlank() ? "System" : admin.getFirstName());
+            admin.setLastName(admin.getLastName() == null || admin.getLastName().isBlank() ? "Admin" : admin.getLastName());
+            admin.setEmail(ADMIN_EMAIL);
+            admin.setPosition(admin.getPosition() == null || admin.getPosition().isBlank() ? "SSO Administrator" : admin.getPosition());
+            admin.setPassword(ADMIN_PASSWORD);
+            admin.setMustChangePassword(false);
+            admin.setActive(true);
+            adminUserRepository.save(admin);
+
+            if (admins.size() > 1) {
+                adminUserRepository.deleteAll(admins.subList(1, admins.size()));
             }
 
             if (studentRepository.count() == 0) {
@@ -39,6 +52,8 @@ public class DataSeeder {
                 student.setLastName("Valendez");
                 student.setEmail("denzel.valendez@cit.edu");
                 student.setYearLevel(3);
+                student.setPassword("123456");
+                student.setMustChangePassword(true);
                 studentRepository.save(student);
             }
 
@@ -48,6 +63,8 @@ public class DataSeeder {
                 staff.setLastname("Santos");
                 staff.setPosition("Records Staff");
                 staff.setEmail("staff1@cit.edu");
+                staff.setPassword("123456");
+                staff.setMustChangePassword(true);
                 staffRepository.save(staff);
             }
 

@@ -40,6 +40,9 @@ public class AdminUser {
     @Column
     private String password;
 
+    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default false")
+    private boolean mustChangePassword = false;
+
     @Column(nullable = false)
     private boolean active = true;
 
@@ -92,6 +95,14 @@ public class AdminUser {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 
     public boolean isActive() {

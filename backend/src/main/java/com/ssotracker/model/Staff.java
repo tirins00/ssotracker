@@ -39,6 +39,12 @@ public class Staff {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column
+    private String password;
+
+    @Column(name = "must_change_password", nullable = false, columnDefinition = "boolean default false")
+    private boolean mustChangePassword = false;
+
     @OneToMany(mappedBy = "staff")
     private List<Report> reports = new ArrayList<>();
 
@@ -83,5 +89,21 @@ public class Staff {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public boolean isMustChangePassword() {
+        return mustChangePassword;
+    }
+
+    public void setMustChangePassword(boolean mustChangePassword) {
+        this.mustChangePassword = mustChangePassword;
     }
 }

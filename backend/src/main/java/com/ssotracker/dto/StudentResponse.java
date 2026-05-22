@@ -7,7 +7,9 @@ public record StudentResponse(
         String firstName,
         String lastName,
         String email,
-        Integer yearLevel
+        Integer yearLevel,
+        String password,
+        boolean mustChangePassword
 ) {
     public static StudentResponse from(Student student) {
         return new StudentResponse(
@@ -15,7 +17,9 @@ public record StudentResponse(
                 student.getFirstName(),
                 student.getLastName(),
                 student.getEmail(),
-                student.getYearLevel()
+                student.getYearLevel(),
+                student.getPassword(),
+                student.isMustChangePassword()
         );
     }
 }

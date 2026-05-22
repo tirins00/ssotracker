@@ -2,8 +2,6 @@ import { useState } from 'react';
 import Icon from '../components/Icon';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
-const DEFAULT_ADMIN_EMAIL = 'admin@cit.edu';
-const DEFAULT_ADMIN_PASSWORD = 'Admin123!';
 
 const LoginPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -32,19 +30,9 @@ const LoginPage = ({ onLogin }) => {
       }
 
       const data = await response.json();
-      onLogin(data.email, data.role, data.firstName, data.lastName);
+      onLogin(data);
     } catch (err) {
-      if (normalizedRole === 'admin') {
-        if (normalizedEmail.toLowerCase() === DEFAULT_ADMIN_EMAIL && password === DEFAULT_ADMIN_PASSWORD) {
-          onLogin(DEFAULT_ADMIN_EMAIL, 'admin', 'System', 'Admin');
-          return;
-        }
-
-        setError('Admin login failed. Check username/password and backend availability.');
-        return;
-      }
-
-      setError(`${normalizedRole === 'staff' ? 'Staff' : 'Student'} login failed. Check that the account exists for the selected role.`);
+      setError(`${normalizedRole === 'admin' ? 'Admin' : normalizedRole === 'staff' ? 'Staff' : 'Student'} login failed. Check your email and password.`);
     }
   };
 

@@ -2,6 +2,7 @@ package com.ssotracker.controller;
 
 import com.ssotracker.dto.AdminUserRequest;
 import com.ssotracker.dto.AdminUserResponse;
+import com.ssotracker.dto.AdminPasswordUpdateRequest;
 import com.ssotracker.service.AdminUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -54,6 +55,11 @@ public class AdminUserController {
     @PutMapping("/{id}")
     AdminUserResponse update(@PathVariable Long id, @Valid @RequestBody AdminUserRequest request) {
         return AdminUserResponse.from(adminUserService.update(id, request));
+    }
+
+    @PutMapping("/{id}/password")
+    AdminUserResponse updatePassword(@PathVariable Long id, @Valid @RequestBody AdminPasswordUpdateRequest request) {
+        return AdminUserResponse.from(adminUserService.updatePassword(id, request.password()));
     }
 
     @DeleteMapping("/{id}")

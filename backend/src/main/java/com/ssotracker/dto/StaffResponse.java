@@ -7,7 +7,9 @@ public record StaffResponse(
         String firstname,
         String lastname,
         String position,
-        String email
+        String email,
+        String password,
+        boolean mustChangePassword
 ) {
     public static StaffResponse from(Staff staff) {
         return new StaffResponse(
@@ -15,7 +17,9 @@ public record StaffResponse(
                 staff.getFirstname(),
                 staff.getLastname(),
                 staff.getPosition(),
-                staff.getEmail()
+                staff.getEmail(),
+                staff.getPassword(),
+                staff.isMustChangePassword()
         );
     }
 }

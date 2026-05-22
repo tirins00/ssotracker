@@ -9,6 +9,7 @@ import java.util.Optional;
 
 public interface AdminUserRepository extends JpaRepository<AdminUser, Long> {
     Optional<AdminUser> findByEmail(String email);
+    Optional<AdminUser> findByEmailIgnoreCase(String email);
     boolean existsByEmail(String email);
     
     // View-only profile endpoint (read profile, not editable)

@@ -2,6 +2,7 @@ package com.ssotracker.controller;
 
 import com.ssotracker.dto.StaffRequest;
 import com.ssotracker.dto.StaffResponse;
+import com.ssotracker.dto.AdminPasswordUpdateRequest;
 import com.ssotracker.service.StaffService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,11 @@ public class StaffController {
     @PutMapping("/{id}")
     StaffResponse update(@PathVariable Long id, @Valid @RequestBody StaffRequest request) {
         return StaffResponse.from(staffService.update(id, request));
+    }
+
+    @PutMapping("/{id}/password")
+    StaffResponse updatePassword(@PathVariable Long id, @Valid @RequestBody AdminPasswordUpdateRequest request) {
+        return StaffResponse.from(staffService.updatePassword(id, request.password()));
     }
 
     @DeleteMapping("/{id}")

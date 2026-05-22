@@ -14,8 +14,6 @@ import com.ssotracker.service.ResourceNotFoundException;
 @Service
 public class AuthService {
 
-    private static final String DEFAULT_ADMIN_EMAIL = "admin@cit.edu";
-
     private final AdminUserRepository adminUserRepository;
     private final StaffRepository staffRepository;
     private final StudentRepository studentRepository;
@@ -29,27 +27,23 @@ public class AuthService {
     }
 
     public AuthResponse login(AuthRequest request) {
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = request.email().trim();
         String role = request.role().trim().toLowerCase();
 
         switch (role) {
             case "admin":
                 return loginAdmin(normalizedEmail, request.password());
             case "staff":
-                return loginStaff(normalizedEmail);
+                return loginStaff(normalizedEmail, request.password());
             case "student":
-                return loginStudent(normalizedEmail);
+                return loginStudent(normalizedEmail, request.password());
             default:
                 throw new ResourceNotFoundException("Unsupported role: " + request.role());
         }
     }
 
     private AuthResponse loginAdmin(String email, String password) {
-        if (!DEFAULT_ADMIN_EMAIL.equals(email)) {
-            throw new ResourceNotFoundException("Invalid admin credentials");
-        }
-
-        AdminUser admin = adminUserRepository.findByEmail(email)
+        AdminUser admin = adminUserRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid admin credentials"));
         if (!admin.isActive()) {
             throw new ResourceNotFoundException("Admin account is inactive");
@@ -57,18 +51,40 @@ public class AuthService {
         if (admin.getPassword() == null || !admin.getPassword().equals(password)) {
             throw new ResourceNotFoundException("Invalid admin credentials");
         }
-        return AuthResponse.from(admin.getEmail(), "admin", admin.getFirstName(), admin.getLastName());
+        return AuthResponse.fromAdmin(
+                admin.getAdminId(),
+                admin.getEmail(),
+                admin.getFirstName(),
+                admin.getLastName(),
+                admin.getPosition(),
+                admin.isActive(),
+                admin.isMustChangePassword()
+        );
     }
 
-    private AuthResponse loginStaff(String email) {
-        Staff staff = staffRepository.findByEmail(email)
+    private AuthResponse loginStaff(String email, String password) {
+        Staff staff = staffRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff account not found"));
-        return AuthResponse.from(staff.getEmail(), "staff", staff.getFirstname(), staff.getLastname());
+        if (staff.getPassword() == null || !staff.getPassword().equals(password)) {
+            throw new ResourceNotFoundException("Invalid staff credentials");
+        }
+        if (StaffService.DEFAULT_PASSWORD.equals(staff.getPassword()) && !staff.isMustChangePassword()) {
+            staff.setMustChangePassword(true);
+            staffRepository.save(staff);
+        }
+        return AuthResponse.from(staff.getStaffId(), staff.getEmail(), "staff", staff.getFirstname(), staff.getLastname(), staff.isMustChangePassword());
     }
 
-    private AuthResponse loginStudent(String email) {
-        Student student = studentRepository.findByEmail(email)
+    private AuthResponse loginStudent(String email, String password) {
+        Student student = studentRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Student account not found"));
-        return AuthResponse.from(student.getEmail(), "student", student.getFirstName(), student.getLastName());
+        if (student.getPassword() == null || !student.getPassword().equals(password)) {
+            throw new ResourceNotFoundException("Invalid student credentials");
+        }
+        if (StudentService.DEFAULT_PASSWORD.equals(student.getPassword()) && !student.isMustChangePassword()) {
+            student.setMustChangePassword(true);
+            studentRepository.save(student);
+        }
+        return AuthResponse.from(student.getUserId(), student.getEmail(), "student", student.getFirstName(), student.getLastName(), student.isMustChangePassword());
     }
 }
