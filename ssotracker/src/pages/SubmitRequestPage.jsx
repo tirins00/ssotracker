@@ -18,12 +18,11 @@ const DOCUMENTS = [
 const STEPS = ['Select Document', 'Request Details', 'Review & Submit'];
 
 const newId = () => {
-  // Use a stable, unique id for list rendering; works in modern browsers and has a fallback.
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const SubmitRequestPage = ({ showToast, onSubmitRequest }) => {
+const SubmitRequestPage = ({ showToast, onSubmitRequest, user = {} }) => {
   const navigate = useNavigate();
   const [step,     setStep]     = useState(1);
   const [selected, setSelected] = useState(null);
@@ -37,6 +36,8 @@ const SubmitRequestPage = ({ showToast, onSubmitRequest }) => {
       id: newId(),
       status: 'Pending',
       createdAt: new Date().toISOString(),
+      studentName: user?.displayName || 'Unknown',
+      studentEmail: user?.email || '',
       document: {
         id: selected?.id,
         title: selected?.title,

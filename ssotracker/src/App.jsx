@@ -4,17 +4,103 @@ import Sidebar from './components/Sidebar';
 import Toast from './components/Toast';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import StaffDashboardPage from './pages/StaffDashboardPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 import SubmitRequestPage from './pages/SubmitRequestPage';
 import TrackRequestsPage from './pages/TrackRequestsPage';
+import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import FAQPage from './pages/FAQPage';
 import './styles/index.css';
+import { isRequestOverdue } from './utils/requestSla';
+import { ThemeProvider } from './context/ThemeContext';
+import { BookmarkProvider } from './context/BookmarkContext';
 
 const STORAGE_KEY = 'ssotracker.requests.v1';
+const NOTIF_KEY = 'ssotracker.notifications.v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+
+const statusFromApi = (status) => {
+  const labels = {
+    PENDING: 'Pending',
+    IN_REVIEW: 'In Review',
+    PROCESSING: 'Processing',
+    COMPLETED: 'Completed',
+    REJECTED: 'Rejected',
+  };
+  return labels[status] || status || 'Pending';
+};
+
+const parseProcessingDays = (value) => {
+  const match = String(value || '').match(/\d+/);
+  return match ? Number(match[0]) : 1;
+};
+
+const formatProcessingTime = (days) => {
+  const count = Number(days) || 1;
+  return `${count} day${count === 1 ? '' : 's'} processing`;
+};
+
+const mapApiRequest = (request) => ({
+  id: String(request.requestId),
+  status: statusFromApi(request.status),
+  createdAt: request.requestDate ? `${request.requestDate}T00:00:00.000Z` : new Date().toISOString(),
+  adminPingedAt: request.adminPingedAt || '',
+  studentName: request.studentName || 'Unknown',
+  studentEmail: request.studentEmail || '',
+  assignedTo: request.assignedStaffEmail || '',
+  assignedToName: request.assignedStaffName || '',
+  document: {
+    id: request.documentId,
+    title: request.documentType || request.requestType || 'Document',
+    processingTime: formatProcessingTime(request.expectedProcessingTime),
+  },
+  purpose: request.purpose || request.requestType || '',
+  notes: request.notes || '',
+});
+
+const notificationTypeFromApi = (type) => String(type || '').toLowerCase();
+
+const notificationTitle = (type) => {
+  const labels = {
+    submit: 'Request submitted',
+    status_update: 'Status updated',
+    overdue: 'Request overdue',
+    ping: 'Admin pinged',
+    assignment: 'Request assigned',
+  };
+  return labels[type] || 'Notification';
+};
+
+const mapApiNotification = (notification) => {
+  const type = notificationTypeFromApi(notification.notificationType);
+  return {
+    id: `api-${notification.notificationId}`,
+    apiId: notification.notificationId,
+    requestId: notification.requestId ? String(notification.requestId) : '',
+    createdAt: notification.dateSent || new Date().toISOString(),
+    type,
+    title: notificationTitle(type),
+    message: notification.message,
+    documentType: notification.documentType || 'Document',
+    studentEmail: notification.studentEmail || '',
+    assignedStaffEmail: notification.assignedStaffEmail || '',
+  };
+};
 
 const loadRequests = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const loadNotifications = () => {
+  try {
+    const raw = localStorage.getItem(NOTIF_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -87,20 +173,75 @@ const nameFromEmail = (email) => {
   return { firstName, lastName, displayName: `${lastName} ${firstName}` };
 };
 
+const notificationsForUser = (notifications, user) => {
+  if (!user) return [];
+  if (user.role === 'admin') {
+    return notifications.filter((n) => ['ping', 'submit', 'overdue'].includes(n.type));
+  }
+  if (user.role === 'staff') {
+    return notifications.filter((n) => n.assignedStaffEmail === user.email || n.type === 'ping');
+  }
+  return notifications.filter((n) => !n.studentEmail || n.studentEmail === user.email);
+};
+
+const sameEmail = (left, right) => (
+  String(left || '').trim().toLowerCase() === String(right || '').trim().toLowerCase()
+);
+
 // Wraps all authenticated pages with the Sidebar layout
-const AppLayout = ({ user, onLogout, showToast, requests, addRequest, currentPath }) => {
+const AppLayout = ({ user, onLogout, showToast, requests, addRequest, pingAdmin, notifications, currentPath, updateRequest, staffMembers, onAssignStaff, onMarkCompleted, onAssignSelf, onUpdateProfile, onDeleteNotification, onDeleteAllNotifications }) => {
+  const visibleNotifications = notificationsForUser(notifications, user);
+  const studentRequests = user?.role === 'student'
+    ? requests.filter((request) => request?.studentEmail && sameEmail(request.studentEmail, user.email))
+    : requests;
+
+  // Show password change page for any role with mustChangePassword flag
+  if (user.mustChangePassword) {
+    return (
+      <div className="app-shell">
+        <Sidebar user={user} onLogout={onLogout} currentPath={currentPath} />
+        <main className="main-content">
+          <ProfilePage user={user} onUpdatePassword={onUpdateProfile} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Sidebar user={user} onLogout={onLogout} currentPath={currentPath} />
       <main className="main-content">
         <Routes>
-          <Route path="/"                  element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard"         element={<DashboardPage user={user} requests={requests} />} />
-          <Route path="/submit"            element={<SubmitRequestPage showToast={showToast} onSubmitRequest={addRequest} />} />
-          <Route path="/track"             element={<TrackRequestsPage requests={requests} />} />
-          <Route path="/notifications"     element={<NotificationsPage />} />
-          <Route path="/faq"               element={<FAQPage />} />
-          <Route path="*"                  element={<Navigate to="/dashboard" replace />} />
+        {user.role === 'admin' ? (
+          <>
+            <Route path="/"                  element={<Navigate to="/admin-dashboard" replace />} />
+            <Route path="/admin-dashboard"   element={<AdminDashboardPage user={user} requests={requests} staffMembers={staffMembers} onAssignStaff={onAssignStaff} showToast={showToast} />} />
+            <Route path="/profile"           element={<ProfilePage user={user} onUpdatePassword={onUpdateProfile} />} />
+            <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} onDeleteNotification={onDeleteNotification} onDeleteAllNotifications={onDeleteAllNotifications} />} />
+            <Route path="/faq"               element={<FAQPage />} />
+            <Route path="*"                  element={<Navigate to="/admin-dashboard" replace />} />
+          </>
+        ) : user.role === 'staff' ? (
+          <>
+            <Route path="/"                  element={<Navigate to="/staff-dashboard" replace />} />
+            <Route path="/staff-dashboard"   element={<StaffDashboardPage user={user} requests={requests} onMarkCompleted={onMarkCompleted} onAssignSelf={onAssignSelf} />} />
+            <Route path="/profile"           element={<ProfilePage user={user} onUpdatePassword={onUpdateProfile} />} />
+            <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} onDeleteNotification={onDeleteNotification} onDeleteAllNotifications={onDeleteAllNotifications} />} />
+            <Route path="/faq"               element={<FAQPage />} />
+            <Route path="*"                  element={<Navigate to="/staff-dashboard" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/"                  element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard"         element={<DashboardPage user={user} requests={studentRequests} />} />
+            <Route path="/submit"            element={<SubmitRequestPage showToast={showToast} onSubmitRequest={addRequest} user={user} />} />
+            <Route path="/track"             element={<TrackRequestsPage requests={studentRequests} onPingAdmin={pingAdmin} />} />
+            <Route path="/profile"           element={<ProfilePage user={user} onUpdatePassword={onUpdateProfile} />} />
+            <Route path="/notifications"     element={<NotificationsPage notifications={visibleNotifications} onDeleteNotification={onDeleteNotification} onDeleteAllNotifications={onDeleteAllNotifications} />} />
+            <Route path="/faq"               element={<FAQPage />} />
+            <Route path="*"                  element={<Navigate to="/dashboard" replace />} />
+          </>
+        )}
         </Routes>
       </main>
     </div>
@@ -108,18 +249,334 @@ const AppLayout = ({ user, onLogout, showToast, requests, addRequest, currentPat
 };
 
 const App = () => {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const loadSavedUser = () => {
+    try {
+      const raw = localStorage.getItem('ssotracker.user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const savedUser = loadSavedUser();
+  const [loggedIn, setLoggedIn] = useState(() => !!savedUser?.email);
   const [toast,    setToast]    = useState(null);
   const [requests, setRequests] = useState(loadRequests);
-  const [user,     setUser]     = useState({
+  const [notifications, setNotifications] = useState(loadNotifications);
+  const [user,     setUser]     = useState(() => savedUser || {
     displayName: 'Student',
     firstName: 'Student',
     lastName: '',
     email: '',
+    role: 'student',
   });
 
+  const [staffMembers, setStaffMembers] = useState([]);
+
+  const newId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  };
+
   const showToast = (msg) => setToast(msg);
-  const addRequest = (req) => setRequests((prev) => [req, ...prev]);
+  const addNotification = (notif) => {
+    if (!notif) return;
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
+  const deleteNotification = async (notification) => {
+    if (!notification?.id) return;
+
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+
+    const apiId = notification.apiId || String(notification.id).replace(/^api-/, '');
+    if (!apiId || String(apiId) === String(notification.id)) {
+      showToast('Notification deleted');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/${apiId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Unable to delete notification');
+      showToast('Notification deleted');
+    } catch {
+      showToast('Notification deleted locally');
+    }
+  };
+
+  const deleteAllNotifications = async (items = []) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    const idsToDelete = new Set(items.map((n) => n?.id).filter(Boolean));
+    setNotifications((prev) => prev.filter((n) => !idsToDelete.has(n.id)));
+
+    const apiIds = items
+      .map((n) => n?.apiId || (String(n?.id || '').startsWith('api-') ? String(n.id).replace(/^api-/, '') : ''))
+      .filter((apiId, index, all) => apiId && all.indexOf(apiId) === index);
+
+    const hasApiDeletes = apiIds.length > 0;
+    if (!hasApiDeletes) {
+      showToast('All notifications deleted');
+      return;
+    }
+
+    try {
+      await Promise.all(apiIds.map(async (apiId) => {
+        const response = await fetch(`${API_BASE_URL}/notifications/${apiId}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Unable to delete notification');
+      }));
+      showToast('All notifications deleted');
+    } catch {
+      showToast('Notifications deleted locally');
+    }
+  };
+
+  const addRequest = async (req) => {
+    let savedRequest = req;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName: req.studentName,
+          studentEmail: req.studentEmail,
+          documentId: req.document.id,
+          requestType: req.document.title,
+          expectedProcessingTime: parseProcessingDays(req.document.processingTime),
+          purpose: req.purpose,
+          notes: req.notes,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Unable to save document request');
+      savedRequest = mapApiRequest(await response.json());
+    } catch {
+      showToast('Backend is offline. Request saved locally for now.');
+    }
+
+    setRequests((prev) => [savedRequest, ...prev]);
+    addNotification({
+      id: newId(),
+      requestId: savedRequest.id,
+      createdAt: new Date().toISOString(),
+      type: 'submit',
+      title: savedRequest === req ? 'Request saved locally' : 'Request submitted',
+      message: `Your request for "${savedRequest?.document?.title || 'Document'}" has been submitted.`,
+      documentType: savedRequest?.document?.title || 'Document',
+      studentEmail: savedRequest.studentEmail || user.email,
+    });
+  };
+
+  const updateRequest = (requestId, patch) => {
+    if (!requestId) return;
+    setRequests((prev) => prev.map((r) => (r?.id === requestId ? { ...r, ...patch } : r)));
+  };
+
+  const assignStaffToRequest = async (requestId, staffEmail) => {
+    if (!requestId) return;
+    if (!staffEmail) {
+      updateRequest(requestId, { assignedTo: '', assignedToName: '', status: 'Pending' });
+      showToast('Staff assignment cleared locally');
+      return;
+    }
+
+    const staffName = staffMembers.find((staff) => staff.email === staffEmail)?.name || '';
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests/${requestId}/assignment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffEmail }),
+      });
+      if (!response.ok) throw new Error('Unable to assign staff');
+      updateRequest(requestId, mapApiRequest(await response.json()));
+      showToast('Staff member assigned to request');
+    } catch {
+      updateRequest(requestId, { assignedTo: staffEmail, assignedToName: staffName, status: 'In Review' });
+      showToast('Backend assignment failed. Assignment saved locally for now.');
+    }
+  };
+
+  const markRequestAsCompleted = async (requestId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests/${requestId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'COMPLETED' }),
+      });
+      if (!response.ok) throw new Error('Unable to complete request');
+      updateRequest(requestId, { ...mapApiRequest(await response.json()), completedAt: new Date().toISOString() });
+      showToast('Request marked as completed');
+    } catch {
+      updateRequest(requestId, { status: 'Completed', completedAt: new Date().toISOString() });
+      showToast('Backend is offline. Completion saved locally for now.');
+    }
+  };
+
+  const assignSelfToRequest = (requestId) => {
+    updateRequest(requestId, { assignedTo: user.email });
+    showToast('Request assigned to you');
+  };
+
+  const pingAdmin = async (req) => {
+    if (!req?.id) return;
+    const pingedAt = new Date().toISOString();
+    updateRequest(req.id, { adminPingedAt: pingedAt });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-requests/${req.id}/ping-admin`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Unable to ping admin');
+      const notification = mapApiNotification(await response.json());
+      addNotification(notification);
+      showToast('Admin has been notified about your overdue request.');
+    } catch {
+      addNotification({
+        id: newId(),
+        requestId: req.id,
+        createdAt: pingedAt,
+        type: 'ping',
+        title: 'Admin pinged',
+        message: `Student pinged for "${req?.document?.title || 'Document'}" request.`,
+        documentType: req?.document?.title || 'Document',
+        studentEmail: req.studentEmail || user.email,
+      });
+      showToast('Backend is offline. Ping saved locally for now.');
+    }
+  };
+
+  const updateProfile = async ({ password, firstName, lastName }) => {
+    if (!user?.role || !user?.userId) {
+      showToast('Unable to update profile.');
+      return false;
+    }
+
+    try {
+      if (!password && (firstName || lastName)) {
+        const response = await fetch(`${API_BASE_URL}/users/profile?email=${encodeURIComponent(user.email)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ firstName, lastName }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update profile');
+        }
+
+        const updatedUser = await response.json();
+        setUser((prev) => ({
+          ...prev,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          displayName: `${updatedUser.lastName} ${updatedUser.firstName}`,
+          email: updatedUser.email || prev.email,
+        }));
+
+        showToast('Profile updated successfully!');
+        return true;
+      }
+
+      let endpoint = '';
+
+      if (user.role === 'admin') {
+        endpoint = `/admin-users/${user.userId}/password`;
+      } else if (user.role === 'staff') {
+        endpoint = `/staff/${user.userId}/password`;
+      } else if (user.role === 'student') {
+        endpoint = `/students/${user.userId}/password`;
+      } else {
+        showToast('Unable to identify user role. Please log in again.');
+        return false;
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update password');
+      }
+
+      await response.json();
+
+      setUser((prev) => ({
+        ...prev,
+        mustChangePassword: false,
+      }));
+
+      showToast('Password updated successfully!');
+      return true;
+    } catch (error) {
+      console.error('Error updating password:', error);
+      showToast('Failed to update password. Please try again.');
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    let active = true;
+
+    const loadBackendRequests = async () => {
+      try {
+        const [requestResponse, notificationResponse, staffResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/document-requests`),
+          fetch(`${API_BASE_URL}/notifications`),
+          fetch(`${API_BASE_URL}/staff`),
+        ]);
+
+        if (!requestResponse.ok) throw new Error('Unable to load document requests');
+        const requestData = await requestResponse.json();
+        if (active && Array.isArray(requestData)) {
+          setRequests(requestData.map(mapApiRequest).reverse());
+        }
+
+        if (notificationResponse.ok) {
+          const notificationData = await notificationResponse.json();
+          if (active && Array.isArray(notificationData)) {
+            setNotifications(notificationData.map(mapApiNotification));
+          }
+        }
+
+        if (staffResponse.ok) {
+          const staffData = await staffResponse.json();
+          if (active && Array.isArray(staffData)) {
+            setStaffMembers(staffData.map(staff => ({
+              email: staff.email,
+              name: `${staff.firstname} ${staff.lastname}`
+            })));
+          }
+        }
+      } catch {
+        // Keep local storage data when the backend is not running.
+        // Also set default staff members for fallback
+        setStaffMembers([
+          { email: 'staff1@cit.edu', name: 'Maria Santos' },
+          { email: 'staff2@cit.edu', name: 'Juan Dela Cruz' },
+          { email: 'staff3@cit.edu', name: 'Rosa Garcia' },
+        ]);
+      }
+    };
+
+    loadBackendRequests();
+
+    return () => {
+      active = false;
+    };
+  }, [loggedIn]);
 
   useEffect(() => {
     try {
@@ -127,37 +584,121 @@ const App = () => {
     } catch {
       // Ignore storage failures (private mode, quota, etc.)
     }
-  }, [requests]);
+  }, [requests, user.email]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications));
+    } catch {
+      // Ignore storage failures (private mode, quota, etc.)
+    }
+  }, [notifications]);
+
+  useEffect(() => {
+    if (loggedIn && user?.email) {
+      try {
+        localStorage.setItem('ssotracker.user', JSON.stringify(user));
+      } catch {
+        // Ignore storage failures
+      }
+    } else {
+      try {
+        localStorage.removeItem('ssotracker.user');
+      } catch {
+        // Ignore storage failures
+      }
+    }
+  }, [loggedIn, user]);
+
+  useEffect(() => {
+    // Create a one-time notification when a request becomes overdue.
+    const now = new Date();
+    let changed = false;
+    const updated = requests.map((r) => {
+      if (!r || r.overdueNotifiedAt) return r;
+      if (!isRequestOverdue(r, now)) return r;
+      changed = true;
+      addNotification({
+        id: newId(),
+        requestId: r.id,
+        createdAt: new Date().toISOString(),
+        type: 'overdue',
+        title: 'Request overdue',
+        message: `Your request for "${r?.document?.title || 'Document'}" is overdue. You can ping the admin from Track Requests.`,
+        documentType: r?.document?.title || 'Document',
+        studentEmail: r.studentEmail || user.email,
+      });
+      return { ...r, overdueNotifiedAt: new Date().toISOString() };
+    });
+
+    if (changed) setRequests(updated);
+  }, [requests, user.email]);
 
   return (
     <BrowserRouter>
-      {loggedIn ? (
-        <>
-          <AppLayout
-            user={user}
-            onLogout={() => setLoggedIn(false)}
-            showToast={showToast}
-            requests={requests}
-            addRequest={addRequest}
-          />
-          {toast && <Toast message={toast} onDone={() => setToast(null)} />}
-        </>
-      ) : (
-        <Routes>
-          <Route
-            path="*"
-            element={(
-              <LoginPage
-                onLogin={(email) => {
-                  const parsed = nameFromEmail(email);
-                  setUser({ ...parsed, email });
-                  setLoggedIn(true);
+      <ThemeProvider>
+        <BookmarkProvider>
+          {loggedIn ? (
+            <>
+              <AppLayout
+                user={user}
+                onLogout={() => {
+                  setLoggedIn(false);
+                  setUser({
+                    displayName: 'Student',
+                    firstName: 'Student',
+                    lastName: '',
+                    email: '',
+                    role: 'student',
+                  });
                 }}
+                showToast={showToast}
+                requests={requests}
+                addRequest={addRequest}
+                pingAdmin={pingAdmin}
+                notifications={notifications}
+                updateRequest={updateRequest}
+                staffMembers={staffMembers}
+                onAssignStaff={assignStaffToRequest}
+                onMarkCompleted={markRequestAsCompleted}
+                onAssignSelf={assignSelfToRequest}
+                onUpdateProfile={updateProfile}
+                onDeleteNotification={deleteNotification}
+                onDeleteAllNotifications={deleteAllNotifications}
               />
-            )}
-          />
-        </Routes>
-      )}
+              {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+            </>
+          ) : (
+            <Routes>
+              <Route
+                path="*"
+                element={(
+                  <LoginPage
+                    onLogin={(loginData) => {
+                      const data = typeof loginData === 'object' && loginData !== null
+                        ? loginData
+                        : {};
+                      const parsed = data.firstName && data.lastName
+                        ? { firstName: data.firstName, lastName: data.lastName, displayName: data.displayName || `${data.lastName} ${data.firstName}` }
+                        : nameFromEmail(data.email);
+                      setUser({
+                        ...parsed,
+                        email: data.email,
+                        userId: data.userId || null,
+                        role: data.role || 'student',
+                        position: data.position || '',
+                        active: data.active,
+                        mustChangePassword: Boolean(data.mustChangePassword),
+                      });
+                      setLoggedIn(true);
+                    }}
+                  />
+                )}
+              />
+            </Routes>
+          )}
+        </BookmarkProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };
